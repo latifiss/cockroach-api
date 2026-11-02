@@ -93,6 +93,9 @@ const latestSchema = new Schema(
       type: String,
       required: false,
     },
+    link: { type: String, default: '' },
+    canonical_url: { type: String, default: '' },
+    first_seen_at: { type: Date, default: Date.now },
     published_at: {
       type: Date,
       required: true,
