@@ -1,6 +1,5 @@
 const cron = require('node-cron');
 const crypto = require('crypto');
-const mongoose = require('mongoose');
 const News = require('../models/news.model');
 const { deduplicateArticles } = require('../utils/deduplicate');
 const { clusterNewsArticles } = require('../utils/newsCluster');
@@ -165,9 +164,5 @@ const clusterNewsCronJob = cron.schedule(
   }
 );
 
-process.on('SIGTERM', () => {
-  clusterNewsCronJob.stop();
-  mongoose.disconnect();
-});
 
 module.exports = clusterNewsCronJob;
