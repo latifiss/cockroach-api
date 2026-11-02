@@ -160,7 +160,7 @@ const clusterNewsCronJob = cron.schedule(
     }
   },
   {
-    scheduled: true,
+    scheduled: false,
     timezone: 'UTC',
   }
 );
