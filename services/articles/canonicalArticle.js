@@ -67,7 +67,13 @@ function normalizeArticle(article, source = {}) {
     source_origin: normalizeText(source.source_origin || source.sourceOrigin),
     source_tags: Array.isArray(source.source_tags) ? source.source_tags : [],
     published_at: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
-    has_image: Boolean(article.image_url || article.image || article.thumbnail),
+    has_image: Boolean(article.has_image || article.image_url || article.image || article.thumbnail),
+    creator: normalizeText(article.creator || source.creator),
+    meta: normalizeText(article.meta),
+    meta_title: normalizeText(article.meta_title),
+    meta_description: normalizeText(article.meta_description),
+    relevance_score: Number.isFinite(Number(article.relevance_score)) ? Number(article.relevance_score) : 1,
+    categories: Array.isArray(article.categories) ? article.categories : [],
   };
 }
 
