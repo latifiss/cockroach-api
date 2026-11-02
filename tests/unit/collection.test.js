@@ -18,12 +18,17 @@ test('mapWithConcurrency preserves input order and respects the concurrency limi
   assert.equal(peak, 2);
 });
 
-test('source registry rejects duplicate source identifiers', () => {
-  const first = () => {};
-  first.sourceId = 'publisher';
+test('mapWithConcurrency rejects invalid limits', async () => {
+  await assert.rejects(mapWithConcurrency([], 0, async () => {}), /concurrency/);
+});
+
+test('source registry ignores repeated references but rejects colliding identifiers', () => {
+  const repeated = () => {};
+  repeated.sourceId = 'publisher-a';
+  assert.equal(createSourceRegistry([repeated, repeated]).length, 1);
   const second = () => {};
-  second.sourceId = 'publisher';
-  assert.throws(() => createSourceRegistry([first, second]), /Duplicate source identifier/);
+  second.sourceId = 'publisher-a';
+  assert.throws(() => createSourceRegistry([repeated, second]), /Duplicate source identifier/);
 });
 
 test('collection isolates source failures and reports source outcomes', async () => {
@@ -39,7 +44,7 @@ test('collection isolates source failures and reports source outcomes', async ()
   assert.equal(result.results[1].error.message, 'publisher unavailable');
 });
 
-test('collection times out a source and retries within configured policy', async () => {
+test('collection retries a failed source within configured policy', async () => {
   let attempts = 0;
   const registry = createSourceRegistry([async () => {
     attempts += 1;
@@ -50,4 +55,11 @@ test('collection times out a source and retries within configured policy', async
   assert.equal(attempts, 2);
   assert.equal(result.succeededCount, 1);
   assert.equal(result.results[0].attempts, 2);
+});
+
+test('collection records timeout failures', async () => {
+  const registry = createSourceRegistry([async () => new Promise(() => {})]);
+  const result = await runCollection(registry, { retryAttempts: 0, timeoutMs: 10 });
+  assert.equal(result.failedCount, 1);
+  assert.equal(result.results[0].error.code, 'SOURCE_TIMEOUT');
 });
