@@ -17,6 +17,12 @@ test('normalizes article records into a stable canonical contract', () => {
   assert.equal(first.source_name, 'Example');
 });
 
+test('scopes publisher-local identifiers to their source when URLs are unavailable', () => {
+  const first = normalizeArticle({ title: 'Story', article_id: '123' }, { source_id: 'publisher-a' });
+  const second = normalizeArticle({ title: 'Story', article_id: '123' }, { source_id: 'publisher-b' });
+  assert.notEqual(first.article_id, second.article_id);
+});
+
 test('rejects records without titles', () => {
   assert.equal(normalizeArticle({ link: 'https://example.com/no-title' }), null);
 });
