@@ -1,14 +1,23 @@
 const CollectionRun = require('../models/collectionRun.model');
 const SourceHealth = require('../models/sourceHealth.model');
 
+function authorizeOperations(req, res, next) {
+  const token = process.env.OPS_API_TOKEN;
+  if (!token) return res.status(404).json({ error: 'Not found' });
+  if (req.get('authorization') !== `Bearer ${token}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+}
+
 async function getSourceHealth(req, res) {
   try {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
     const sources = await SourceHealth.find(filter).sort({ status: 1, last_attempt_at: -1 }).lean();
-    res.json({ total: sources.length, sources });
+    return res.json({ total: sources.length, sources });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve source health' });
+    return res.status(500).json({ error: 'Failed to retrieve source health' });
   }
 }
 
@@ -22,9 +31,9 @@ async function getCollectionRuns(req, res) {
       CollectionRun.find(filter).sort({ started_at: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       CollectionRun.countDocuments(filter),
     ]);
-    res.json({ total, page, per_page: limit, total_pages: Math.ceil(total / limit), runs });
+    return res.json({ total, page, per_page: limit, total_pages: Math.ceil(total / limit), runs });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve collection runs' });
+    return res.status(500).json({ error: 'Failed to retrieve collection runs' });
   }
 }
 
@@ -38,4 +47,4 @@ async function getCollectionRun(req, res) {
   }
 }
 
-module.exports = { getSourceHealth, getCollectionRuns, getCollectionRun };
+module.exports = { authorizeOperations, getSourceHealth, getCollectionRuns, getCollectionRun };
