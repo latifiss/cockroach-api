@@ -53,6 +53,9 @@ function mergeClusters(newClusters, oldClusters) {
 
 const getNewsFeed = async (req, res) => {
   try {
+    if (Date.now() - cachedNews.lastUpdated.getTime() >= CACHE_TTL_MS) {
+      await updateNewsCache();
+    }
     const pageNum = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limitNum = Math.min(200, Math.max(1, Number.parseInt(req.query.limit, 10) || 200));
     const clusters = cachedNews.clusters;
