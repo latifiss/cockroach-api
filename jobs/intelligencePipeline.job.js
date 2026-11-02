@@ -23,6 +23,7 @@ async function persistClusters(clusters) {
     const sorted = [...cluster].sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
     const articles = sorted.map((article, index) => ({
       ...article,
+      published_at: article.published_at || new Date(),
       slug: article.slug || `${generateSlug(article.title) || 'article'}-${article.article_id.slice(0, 10)}`,
       meta: article.meta || generateMetaDescription(article),
       article_type: index === 0 ? 'main' : 'sub',
@@ -82,6 +83,8 @@ async function executePipeline() {
 
     const clusters = articles.length ? await clusterNewsArticles(articles, 0.7) : [];
     const clusterPersistence = await persistClusters(clusters);
+    const { updateNewsCache } = require('../controllers/news/feed.controller');
+    await updateNewsCache();
     logger.info('Intelligence pipeline completed', {
       durationMs: Date.now() - startedAt,
       sources: collection.sourceCount,
