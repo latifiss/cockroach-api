@@ -111,7 +111,7 @@ const latestSchema = new Schema(
     },
     source_link: {
       type: String,
-      required: true,
+      default: '',
     },
     source_tags: [
       {
