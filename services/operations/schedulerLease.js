@@ -27,9 +27,12 @@ async function acquirePipelineLease() {
 }
 
 async function releasePipelineLease() {
+  const lease = await SchedulerLease.findOne({ _id: LEASE_ID, owner: ownerId }).lean();
+  if (!lease) return;
+  const nextScheduledWindow = new Date(new Date(lease.acquired_at).getTime() + 4 * 60 * 1000 + 50 * 1000);
   await SchedulerLease.updateOne(
     { _id: LEASE_ID, owner: ownerId },
-    { $set: { lease_until: new Date(Date.now() + 4 * 60 * 1000) } }
+    { $set: { lease_until: nextScheduledWindow } }
   );
 }
 
