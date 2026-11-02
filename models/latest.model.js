@@ -35,6 +35,7 @@ const latestSchema = new Schema(
         trim: true,
       },
     ],
+    relevance_score: { type: Number, default: 1 },
     isBreaking: {
       type: Boolean,
       required: true,
