@@ -1,36 +1,54 @@
-const express = require('express');
-const { connectDB } = require('./db/index');
 require('dotenv').config();
+const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
 const cluster = require('cluster');
-const numCPUs = require('os').cpus().length;
+const os = require('os');
 const { throttle } = require('lodash');
+const { connectDB, isDBConnected, mongoose } = require('./db');
+const { loadRuntimeConfig } = require('./config/runtime');
+const { createLogger } = require('./utils/logger');
 
+const config = loadRuntimeConfig();
+const logger = createLogger();
 const latestRouter = require('./routes/news/latest.routes');
 const clusterRouter = require('./routes/news/cluster.routes');
 const feedRouter = require('./routes/news/feed.routes');
 const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
-
 const { updateNewsCache } = require('./controllers/news/feed.controller');
 const latestNewsCronJob = require('./jobs/latest.job');
 const clusterNewsCronJob = require('./jobs/clusterNews.job');
 
-if (cluster.isMaster) {
-  console.log(`👾 Master ${process.pid} is running`);
+if (cluster.isPrimary) {
+  logger.info('Primary process started', { pid: process.pid });
+  const workerCount = Math.min(os.cpus().length, 4);
 
-  for (let i = 0; i < Math.min(numCPUs, 4); i++) {
+  for (let index = 0; index < workerCount; index += 1) {
     cluster.fork();
   }
 
-  cluster.on('exit', (worker) => {
-    console.log(`Worker ${worker.process.pid} died`);
-    cluster.fork();
+  cluster.on('exit', (worker, code, signal) => {
+    logger.error('API worker exited', { workerId: worker.id, pid: worker.process.pid, code, signal });
+    if (!shuttingDown) cluster.fork();
   });
+
+  let shuttingDown = false;
+  const shutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info('Primary process shutting down');
+    for (const worker of Object.values(cluster.workers)) {
+      worker?.process.kill('SIGTERM');
+    }
+    setTimeout(() => process.exit(0), 10000).unref();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 } else {
+  let server;
+  let shuttingDown = false;
   const app = express();
-  const PORT = process.env.PORT || 5000;
 
   app.use(cors());
   app.use(express.json({ limit: '10kb' }));
@@ -42,45 +60,69 @@ if (cluster.isMaster) {
   app.use('/api/articles', articleRouter);
   app.use('/api/news-feed', newsRouter);
 
+  app.get('/health/live', (req, res) => {
+    res.status(200).json({ status: 'alive', pid: process.pid });
+  });
+
+  app.get('/health/ready', (req, res) => {
+    const ready = isDBConnected();
+    res.status(ready ? 200 : 503).json({
+      status: ready ? 'ready' : 'not_ready',
+      dependencies: { mongodb: ready ? 'connected' : 'disconnected' },
+    });
+  });
+
   app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
+    const ready = isDBConnected();
+    res.status(ready ? 200 : 503).json({
+      status: ready ? 'healthy' : 'degraded',
+      pid: process.pid,
+      dependencies: { mongodb: ready ? 'connected' : 'disconnected' },
+    });
   });
 
-  const throttledUpdateNewsCache = throttle(updateNewsCache, 60000, {
-    trailing: false,
-  });
+  const throttledUpdateNewsCache = throttle(updateNewsCache, 60000, { trailing: false });
 
-  const server = app.listen(PORT, async () => {
-    console.log(`🌍 Worker ${process.pid} running on port ${PORT}`);
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info('API worker shutting down', { signal, pid: process.pid });
+    latestNewsCronJob.stop();
+    clusterNewsCronJob.stop();
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+    await mongoose.disconnect();
+    process.exit(0);
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  server = app.listen(config.port, async () => {
+    logger.info('API worker listening', { pid: process.pid, port: config.port, workerId: cluster.worker.id });
 
     try {
       await connectDB();
-
       if (cluster.worker.id === 1) {
         setTimeout(() => {
+          if (shuttingDown) return;
           latestNewsCronJob.start();
           clusterNewsCronJob.start();
-
           setTimeout(() => {
-            throttledUpdateNewsCache().catch(console.error);
+            if (!shuttingDown) throttledUpdateNewsCache().catch((error) => logger.error('Initial feed cache refresh failed', { error }));
           }, 15000);
         }, 5000);
       }
-    } catch (err) {
-      console.error('Failed to initialize:', err);
+    } catch (error) {
+      logger.error('Worker initialization failed', { error });
+      server.close(() => process.exit(1));
     }
   });
 
   cron.schedule('*/15 * * * *', () => {
-    if (cluster.worker.id === 1) {
-      throttledUpdateNewsCache().catch(console.error);
+    if (cluster.worker.id === 1 && !shuttingDown) {
+      throttledUpdateNewsCache().catch((error) => logger.error('Feed cache refresh failed', { error }));
     }
-  });
-
-  process.on('SIGTERM', () => {
-    server.close(() => {
-      console.log(`Worker ${process.pid} closed`);
-      process.exit(0);
-    });
   });
 }
