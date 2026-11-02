@@ -27,7 +27,10 @@ async function acquirePipelineLease() {
 }
 
 async function releasePipelineLease() {
-  await SchedulerLease.deleteOne({ _id: LEASE_ID, owner: ownerId });
+  await SchedulerLease.updateOne(
+    { _id: LEASE_ID, owner: ownerId },
+    { $set: { lease_until: new Date(Date.now() + 4 * 60 * 1000) } }
+  );
 }
 
 module.exports = { acquirePipelineLease, releasePipelineLease };
