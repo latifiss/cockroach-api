@@ -121,7 +121,7 @@ const latestNewsCronJob = cron.schedule(
     }
   },
   {
-    scheduled: true,
+    scheduled: false,
     timezone: 'UTC',
   }
 );
