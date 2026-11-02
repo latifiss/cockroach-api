@@ -7,6 +7,7 @@ const { clusterNewsArticles } = require('../utils/newsCluster');
 const { getRepresentativeTitle } = require('../utils/representativeTitle');
 const { generateSlug, generateMetaDescription } = require('../utils/helpers');
 const { createLogger } = require('../utils/logger');
+const { acquirePipelineLease, releasePipelineLease } = require('../services/operations/schedulerLease');
 
 const logger = createLogger();
 let running = false;
@@ -58,7 +59,13 @@ async function executePipeline() {
   }
   running = true;
   const startedAt = Date.now();
+  let leaseAcquired = false;
   try {
+    leaseAcquired = await acquirePipelineLease();
+    if (!leaseAcquired) {
+      logger.debug('Intelligence pipeline skipped because another instance owns the scheduler lease');
+      return null;
+    }
     const collection = await collectCanonicalArticles();
     await persistCollectionRun(collection);
     if (collection.succeededCount === 0) {
@@ -99,6 +106,9 @@ async function executePipeline() {
     logger.error('Intelligence pipeline failed', { error });
     throw error;
   } finally {
+    if (leaseAcquired) {
+      await releasePipelineLease().catch((error) => logger.error('Failed to release pipeline scheduler lease', { error }));
+    }
     running = false;
   }
 }
