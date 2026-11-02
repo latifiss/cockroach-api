@@ -11,6 +11,7 @@ const { acquirePipelineLease, releasePipelineLease } = require('../services/oper
 
 const logger = createLogger();
 let running = false;
+const CollectionRun = require('../models/collectionRun.model');
 
 function stableClusterId(cluster) {
   const crypto = require('crypto');
@@ -60,6 +61,7 @@ async function executePipeline() {
   running = true;
   const startedAt = Date.now();
   let leaseAcquired = false;
+  let collectionRun = null;
   try {
     leaseAcquired = await acquirePipelineLease();
     if (!leaseAcquired) {
@@ -67,8 +69,9 @@ async function executePipeline() {
       return null;
     }
     const collection = await collectCanonicalArticles();
-    await persistCollectionRun(collection);
+    collectionRun = await persistCollectionRun(collection);
     if (collection.succeededCount === 0) {
+      await CollectionRun.updateOne({ _id: collectionRun._id }, { $set: { pipeline_status: 'skipped', pipeline_error: 'No publisher source completed successfully' } });
       logger.error('Collection produced no successful source results; preserving existing article and cluster data', {
         sourceCount: collection.sourceCount,
         failedCount: collection.failedCount,
@@ -92,6 +95,7 @@ async function executePipeline() {
     const clusterPersistence = await persistClusters(clusters);
     const { updateNewsCache } = require('../controllers/news/feed.controller');
     await updateNewsCache();
+    await CollectionRun.updateOne({ _id: collectionRun._id }, { $set: { pipeline_status: 'completed', pipeline_error: null } });
     logger.info('Intelligence pipeline completed', {
       durationMs: Date.now() - startedAt,
       sources: collection.sourceCount,
@@ -103,6 +107,12 @@ async function executePipeline() {
     });
     return { collection, latest, clusterPersistence };
   } catch (error) {
+    if (collectionRun?._id) {
+      await CollectionRun.updateOne(
+        { _id: collectionRun._id },
+        { $set: { pipeline_status: 'failed', pipeline_error: error.message } }
+      ).catch((persistenceError) => logger.error('Failed to record pipeline failure', { error: persistenceError }));
+    }
     logger.error('Intelligence pipeline failed', { error });
     throw error;
   } finally {
