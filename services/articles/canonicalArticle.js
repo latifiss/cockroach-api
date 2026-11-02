@@ -42,10 +42,10 @@ function normalizeArticle(article, source = {}) {
   const sourceName = normalizeText(article.source_name || source.source_name || source.sourceName);
   const url = canonicalizeUrl(article.link || article.url || article.source_link);
   const titleFingerprint = hash(title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim());
-  const identity = article.article_id
-    ? `external:${normalizeText(String(article.article_id))}`
-    : url
-      ? `url:${url}`
+  const identity = url
+    ? `url:${url}`
+    : article.article_id
+      ? `external:${sourceId || 'unknown'}:${normalizeText(String(article.article_id))}`
       : `source-title:${sourceId || 'unknown'}:${titleFingerprint}`;
 
   const publishedAt = article.published_at || article.pubDate || article.publishedAt || null;
