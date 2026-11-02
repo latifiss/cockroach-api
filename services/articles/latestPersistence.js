@@ -20,6 +20,8 @@ function toLatestDocument(article) {
     source_link: article.source_link || article.canonical_url || article.link || '',
     source_origin: article.source_origin || '',
     source_tags: Array.isArray(article.source_tags) ? article.source_tags : [],
+    categories: Array.isArray(article.categories) ? article.categories : [],
+    relevance_score: article.relevance_score ?? 1,
     creator: article.creator || '',
     published_at: article.published_at || new Date(),
     isBreaking: false,
