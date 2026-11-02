@@ -3,10 +3,10 @@ const SourceHealth = require('../../models/sourceHealth.model');
 const { transitionSourceHealth } = require('./sourceHealth');
 
 async function persistCollectionRun(run) {
-  const status = run.failedCount === 0
-    ? 'completed'
-    : run.succeededCount === 0
-      ? 'failed'
+  const status = run.sourceCount === 0 || (run.failedCount > 0 && run.succeededCount === 0)
+    ? 'failed'
+    : run.failedCount === 0
+      ? 'completed'
       : 'completed_with_errors';
 
   const document = await CollectionRun.create({
