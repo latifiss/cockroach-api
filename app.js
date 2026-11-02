@@ -87,11 +87,9 @@ if (cluster.isPrimary) {
     logger.info('API worker listening', { pid: process.pid, port: config.port, workerId: cluster.worker.id });
     try {
       await connectDB();
-      if (cluster.worker.id === 1) {
-        await updateNewsCache();
-        intelligencePipelineJob.start();
-        logger.info('Intelligence pipeline scheduler started');
-      }
+      await updateNewsCache();
+      intelligencePipelineJob.start();
+      logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id });
     } catch (error) {
       logger.error('Worker initialization failed', { error });
       server.close(() => process.exit(1));
