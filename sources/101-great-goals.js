@@ -113,3 +113,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGreatGoalsNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, '101greatgoals.com', 'Sports');

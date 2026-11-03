@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   men: {
     id: 1020,
     name: 'Manchester Evening News - Manchester United FC',
+    domain_url: 'manchestereveningnews.co.uk',
+    source_category: 'Sports',
     tags: [
       'football',
       'manchester',
@@ -154,3 +156,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

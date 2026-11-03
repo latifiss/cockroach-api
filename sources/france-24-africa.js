@@ -76,3 +76,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFrance24Africa };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'france24.com', 'Africa');

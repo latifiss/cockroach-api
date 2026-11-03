@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   graphicgh_politics: {
     id: 1163,
     name: 'Graphic',
+    domain_url: 'graphic.com.gh',
+    source_category: 'Politics',
     tags: [
       'politics',
       'ghana',
@@ -190,3 +192,5 @@ module.exports = {
   parseGraphicDate,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

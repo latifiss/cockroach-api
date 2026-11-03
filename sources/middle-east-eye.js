@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   middleeasteye: {
     id: 1034,
     name: 'Middle East Eye',
+    domain_url: 'middleeasteye.net',
+    source_category: 'World',
     tags: ['middle-east', 'news', 'politics', 'analysis', 'international'],
     origin: 'International',
     credibility: 4,
@@ -158,3 +160,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

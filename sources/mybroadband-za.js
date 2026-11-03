@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   mybroadband: {
     id: 1134,
     name: 'MyBroadband',
+    domain_url: 'mybroadband.co.za',
+    source_category: 'Technology',
     tags: ['technology', 'telecoms', 'internet', 'south-africa', 'ict'],
     origin: 'South Africa',
     credibility: 4,
@@ -140,3 +142,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

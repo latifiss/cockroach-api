@@ -81,3 +81,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchMashableNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'mashable.com', 'Technology');

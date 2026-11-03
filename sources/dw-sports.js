@@ -70,3 +70,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchDWSports };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'dw.com', 'Sports');

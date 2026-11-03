@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchToffeeWebNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'toffeeweb.com', 'Sports');

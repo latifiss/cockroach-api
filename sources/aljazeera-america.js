@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   ajam: {
     id: 1032,
     name: 'Al Jazeera',
+    domain_url: 'aljazeera.com',
+    source_category: 'World',
     tags: ['news', 'us', 'politics', 'world', 'international'],
     origin: 'United States',
     credibility: 2,
@@ -139,3 +141,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

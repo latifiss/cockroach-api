@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchYahooWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'yahoo.com', 'World');

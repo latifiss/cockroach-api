@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   nigerian_eye: {
     id: 1127,
     name: 'Nigerian Eye',
+    domain_url: 'nigerianeye.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -155,3 +157,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

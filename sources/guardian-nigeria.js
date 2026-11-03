@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   guardian_ng: {
     id: 1115,
     name: 'The Guardian Nigeria',
+    domain_url: 'guardian.ng',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -148,3 +150,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

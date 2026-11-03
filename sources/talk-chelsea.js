@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTalkChelseaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'talkchelsea.net', 'Sports');

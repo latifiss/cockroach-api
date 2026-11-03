@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   daily_guide_health: {
     id: 1175,
     name: 'Daily Guide Network',
+    domain_url: 'dailyguidenetwork.com',
+    source_category: 'Science & Health',
     tags: [
       'news',
       'ghana',
@@ -237,3 +239,5 @@ module.exports = {
   fetchDailyGuideHealthNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -84,3 +84,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchDWCulture };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'dw.com', 'Entertainment');

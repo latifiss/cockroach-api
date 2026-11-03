@@ -100,3 +100,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchPCWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'pcworld.com', 'World');

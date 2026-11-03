@@ -107,3 +107,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSportsMoleBarcelonaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'sportsmole.co.uk', 'Sports');

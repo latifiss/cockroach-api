@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetch90MinNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, '90min.com', 'Sports');

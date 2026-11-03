@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchJuveFCNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'juvefc.com', 'Sports');

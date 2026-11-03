@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   middleeastmonitor: {
     id: 1033,
     name: 'Middle East Monitor (Disqus)',
+    domain_url: 'middleeastmonitor.com',
+    source_category: 'World',
     tags: ['middle-east', 'news', 'politics', 'commentary', 'international'],
     origin: 'International',
     credibility: 4,
@@ -139,3 +141,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

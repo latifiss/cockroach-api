@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   the_publisher_online_latest_news: {
     id: 1170,
     name: 'The Publisher',
+    domain_url: 'thepublisheronline.com',
+    source_category: 'Local',
     tags: ['ghana', 'news', 'local'],
     origin: 'Ghana',
     credibility: 4,
@@ -144,3 +146,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

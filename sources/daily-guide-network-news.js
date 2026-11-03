@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   daily_guide_general: {
     id: 1175,
     name: 'Daily Guide Network',
+    domain_url: 'dailyguidenetwork.com',
+    source_category: 'Local',
     tags: ['news', 'ghana', 'general', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -213,3 +215,5 @@ module.exports = {
   fetchDailyGuideGeneralNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

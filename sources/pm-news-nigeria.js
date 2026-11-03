@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   pm_news: {
     id: 1117,
     name: 'PM News Nigeria',
+    domain_url: 'pmnewsnigeria.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -152,3 +154,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

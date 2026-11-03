@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBarcaUniversalNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'barcauniversal.com', 'Sports');

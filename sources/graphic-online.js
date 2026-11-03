@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   graphicgh: {
     id: 1163,
     name: 'Graphic',
+    domain_url: 'graphic.com.gh',
+    source_category: 'Africa',
     tags: ['news', 'ghana', 'politics', 'local', 'current events'],
     origin: 'Ghana',
     credibility: 5,
@@ -168,3 +170,5 @@ module.exports = {
   fetchGraphicNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

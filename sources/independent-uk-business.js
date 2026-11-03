@@ -124,3 +124,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIndependentBusinessNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'independent.co.uk', 'Business & Finance');

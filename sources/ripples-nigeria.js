@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   ripples_ng: {
     id: 1125,
     name: 'Ripples Nigeria',
+    domain_url: 'ripplesnigeria.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -154,3 +156,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

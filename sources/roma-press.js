@@ -93,3 +93,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRomaPressNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'romapress.net', 'Sports');

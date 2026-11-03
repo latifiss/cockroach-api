@@ -7,6 +7,8 @@ const SOURCE_CONFIG = {
   '3news-business': {
     id: 1162, // Unique ID for 3News.com Business
     name: '3News',
+    domain_url: '3news.com',
+    source_category: 'Business & Finance',
     tags: ['news', 'ghana', 'business', 'economy', 'finance', 'current events'],
     origin: 'Ghana',
     credibility: 5, // Placeholder, adjust as necessary
@@ -255,3 +257,5 @@ module.exports = {
   generateArticleId,
   parse3NewsArticleDate,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

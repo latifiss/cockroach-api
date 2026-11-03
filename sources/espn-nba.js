@@ -112,3 +112,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchESPNNBANews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'espn.com', 'Sports');

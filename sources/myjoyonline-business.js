@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   myjoyonline: {
     id: 1161,
     name: 'MyJoyOnline',
+    domain_url: 'myjoyonline.com',
+    source_category: 'Business & Finance',
     tags: ['business', 'economy', 'ghana', 'finance', 'markets'],
     origin: 'Ghana',
     credibility: 5,
@@ -135,3 +137,5 @@ if (require.main === module) {
 module.exports = {
   fetchMyJoyOnlineBusiness,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

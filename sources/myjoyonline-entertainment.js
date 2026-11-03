@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   myjoyonline: {
     id: 1161,
     name: 'MyJoyOnline',
+    domain_url: 'myjoyonline.com',
+    source_category: 'Entertainment',
     tags: ['arts', 'culture', 'ghana', 'entertainment', 'music'],
     origin: 'Ghana',
     credibility: 5,
@@ -135,3 +137,5 @@ if (require.main === module) {
 module.exports = {
   fetchMyJoyOnlineArtsCulture,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

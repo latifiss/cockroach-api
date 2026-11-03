@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchLaLigaBlogNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'laligablog.com', 'Sports');

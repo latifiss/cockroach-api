@@ -107,3 +107,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBarcaBlaugranesNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'barcablaugranes.com', 'Sports');

@@ -28,6 +28,8 @@ function transitionSourceHealth(previous = {}, outcome, sourceName) {
   return {
     source_id: outcome.sourceId,
     source_name: resolvedSourceName,
+    domain_url: outcome.domain_url || previous.domain_url,
+    source_category: outcome.source_category || previous.source_category || 'News',
     status,
     consecutive_failures: failures,
     total_runs: totalRuns,

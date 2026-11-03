@@ -85,3 +85,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTimeHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'time.com', 'Science & Health');

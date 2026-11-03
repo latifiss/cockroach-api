@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNBCNewsGeneralNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'nbcnews.com', 'World');

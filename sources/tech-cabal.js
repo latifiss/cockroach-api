@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   techcabal: {
     id: 1144,
     name: 'TechCabal',
+    domain_url: 'techcabal.com',
+    source_category: 'Technology',
     tags: [
       'technology',
       'africa',
@@ -147,3 +149,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -69,3 +69,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchWallStreetJournalWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'wsj.com', 'World');

@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNPRGeneralNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'npr.org', 'News');

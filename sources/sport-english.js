@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSportEsNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'sport.es', 'Sports');

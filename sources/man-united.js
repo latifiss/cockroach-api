@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchManUtdNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'manutd.com', 'Sports');

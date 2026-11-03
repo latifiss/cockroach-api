@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSamsungGlobalNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'samsung.com', 'Technology');

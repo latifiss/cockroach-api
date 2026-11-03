@@ -76,3 +76,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFrance24News };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'france24.com', 'World');

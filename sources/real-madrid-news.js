@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRealMadridNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'realmadridnews.com', 'Sports');

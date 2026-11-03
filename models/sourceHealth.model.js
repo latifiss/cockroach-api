@@ -1,8 +1,15 @@
 const mongoose = require('mongoose');
+const { SOURCE_CATEGORIES } = require('../utils/sourceConfig');
 
 const sourceHealthSchema = new mongoose.Schema({
   source_id: { type: String, required: true, unique: true },
   source_name: { type: String, required: true, trim: true },
+  domain_url: { type: String, required: true, trim: true },
+  source_category: {
+    type: String,
+    required: true,
+    enum: [...SOURCE_CATEGORIES],
+  },
   status: { type: String, enum: ['healthy', 'degraded', 'failing', 'unknown'], default: 'unknown', index: true },
   consecutive_failures: { type: Number, default: 0, min: 0 },
   total_runs: { type: Number, default: 0, min: 0 },

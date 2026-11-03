@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   newsghana_entertainment: {
     id: 1173,
     name: 'News Ghana',
+    domain_url: 'newsghana.com.gh',
+    source_category: 'Entertainment',
     tags: ['news', 'ghana', 'entertainment', 'music', 'movies', 'celebrities'],
     origin: 'Ghana',
     credibility: 5,
@@ -153,3 +155,5 @@ module.exports = {
   fetchNewsGhanaEntertainmentNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

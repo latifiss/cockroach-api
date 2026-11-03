@@ -5,6 +5,8 @@ const { transitionSourceHealth } = require('../../services/operations/sourceHeal
 test('source health becomes degraded after a failure', () => {
   const result = transitionSourceHealth({}, {
     sourceId: 'publisher-a',
+    domain_url: 'publisher-a.com',
+    source_category: 'Business & Finance',
     status: 'failed',
     completedAt: new Date('2026-11-02T12:00:00Z'),
     durationMs: 1200,
@@ -15,6 +17,8 @@ test('source health becomes degraded after a failure', () => {
   assert.equal(result.consecutive_failures, 1);
   assert.equal(result.failed_runs, 1);
   assert.equal(result.source_name, 'publisher-a');
+  assert.equal(result.domain_url, 'publisher-a.com');
+  assert.equal(result.source_category, 'Business & Finance');
 });
 
 test('source health replaces blank names with a humanized source identifier', () => {

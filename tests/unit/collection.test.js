@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { mapWithConcurrency } = require('../../services/collection/limitConcurrency');
 const { createSourceRegistry } = require('../../services/collection/sourceRegistry');
 const { runCollection } = require('../../services/collection/collectionOrchestrator');
+const { attachSourceConfigName, attachSourceDomainUrl } = require('../../utils/sourceConfig');
 
 test('mapWithConcurrency preserves input order and respects the concurrency limit', async () => {
   let active = 0;
@@ -36,6 +37,34 @@ test('source registry supplies a non-empty name when a source name is blank', ()
   fetchGraphicSportsArticles.sourceName = '  ';
   const [source] = createSourceRegistry([fetchGraphicSportsArticles]);
   assert.equal(source.name, 'Graphic Sports');
+});
+
+test('source registry uses the configured name for failed sources', async () => {
+  const fetch3NewsBusiness = async () => {
+    throw new Error('unavailable');
+  };
+  attachSourceConfigName({ fetch3NewsBusiness }, {
+    '3news-business': { name: '3News', domain_url: '3news.com', source_category: 'Sports' },
+  });
+
+  const registry = createSourceRegistry([fetch3NewsBusiness]);
+  const result = await runCollection(registry, { retryAttempts: 0 });
+
+  assert.equal(result.results[0].sourceName, '3News');
+  assert.equal(result.results[0].domain_url, '3news.com');
+  assert.equal(result.results[0].source_category, 'Sports');
+});
+
+test('source registry carries the domain URL for sources without SOURCE_CONFIG', async () => {
+  const fetchSkyNewsBusiness = async () => ({ articles: [] });
+  attachSourceDomainUrl({ fetchSkyNewsBusiness }, 'skynews.com', 'Business & Finance');
+
+  const [source] = createSourceRegistry([fetchSkyNewsBusiness]);
+  const result = await runCollection([source], { retryAttempts: 0 });
+
+  assert.equal(result.results[0].source.domain_url, 'skynews.com');
+  assert.equal(result.results[0].source_category, 'Business & Finance');
+  assert.equal(result.results[0].source.source_category, 'Business & Finance');
 });
 
 test('collection isolates source failures and reports source outcomes', async () => {

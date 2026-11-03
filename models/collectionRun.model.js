@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
+const { SOURCE_CATEGORIES } = require('../utils/sourceConfig');
 
 const sourceOutcomeSchema = new mongoose.Schema({
   source_id: { type: String, required: true },
+  source_category: { type: String, enum: [...SOURCE_CATEGORIES], required: true },
   status: { type: String, enum: ['succeeded', 'failed'], required: true },
   attempts: { type: Number, required: true, min: 1 },
   started_at: { type: Date, required: true },

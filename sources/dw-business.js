@@ -70,3 +70,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchDWBusinessNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'dw.com', 'Business & Finance');

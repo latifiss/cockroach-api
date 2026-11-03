@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   premium_times: {
     id: 1116,
     name: 'Premium Times Nigeria',
+    domain_url: 'premiumtimesng.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -146,3 +148,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

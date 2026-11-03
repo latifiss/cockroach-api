@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchEmpireOfTheKopNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'empireofthekop.com', 'Sports');

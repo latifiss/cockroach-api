@@ -103,3 +103,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIMoreNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'imore.com', 'Technology');

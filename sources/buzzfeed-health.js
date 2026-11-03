@@ -80,3 +80,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBuzzfeedHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'buzzfeed.com', 'Science & Health');

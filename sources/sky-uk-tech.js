@@ -77,3 +77,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSkyNewsTechnology };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'skynews.com', 'Technology');

@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCaughtOffsideNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'caughtoffside.com', 'Sports');

@@ -1,3 +1,5 @@
+const { SOURCE_CATEGORIES } = require('../../utils/sourceConfig');
+
 function humanizeSourceName(value) {
   const sourceName = String(value ?? '').trim();
   const name = sourceName
@@ -37,9 +39,20 @@ function createSourceRegistry(fetchers) {
     }
 
     const name = resolveSourceName(id, fetcher.sourceName, humanizeSourceName(fetcher.name || id));
+    const domainUrl = String(fetcher.domainUrl || '').trim();
+    const sourceCategory = fetcher.sourceCategory || 'News';
+    if (!SOURCE_CATEGORIES.has(sourceCategory)) {
+      throw new Error(`Source ${id} has an invalid source_category: ${sourceCategory}`);
+    }
     seenIds.set(id, fetcher);
     seenFunctions.add(fetcher);
-    registry.push(Object.freeze({ id, name, fetch: fetcher }));
+    registry.push(Object.freeze({
+      id,
+      name,
+      domain_url: domainUrl,
+      source_category: sourceCategory,
+      fetch: fetcher,
+    }));
   });
 
   return Object.freeze(registry);

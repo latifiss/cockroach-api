@@ -71,3 +71,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFinancialTimesGlobalEconomyNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'ft.com', 'Business & Finance');

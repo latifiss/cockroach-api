@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   daily_maverick: {
     id: 1131,
     name: 'Daily Maverick',
+    domain_url: 'dailymaverick.co.za',
+    source_category: 'Africa',
     tags: [
       'news',
       'south-africa',
@@ -155,3 +157,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   itnewsafrica: {
     id: 1151,
     name: 'IT News Africa',
+    domain_url: 'itnewsafrica.com',
+    source_category: 'Africa',
     tags: [
       'technology',
       'africa',
@@ -149,3 +151,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

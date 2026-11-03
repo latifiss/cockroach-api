@@ -21,6 +21,8 @@ async function persistCollectionRun(run) {
     article_count: run.articleCount,
     source_outcomes: run.results.map((result) => ({
       source_id: result.sourceId,
+      domain_url: result.domain_url,
+      source_category: result.source_category,
       status: result.status,
       attempts: result.attempts,
       started_at: result.startedAt,

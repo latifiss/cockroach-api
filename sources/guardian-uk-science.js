@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   guardian: {
     id: 1004,
     name: 'The Guardian',
+    domain_url: 'theguardian.com',
+    source_category: 'Science & Health',
     tags: ['science', 'technology', 'research'],
     origin: 'United Kingdom',
     credibility: 4,
@@ -146,3 +148,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   converseer: {
     id: 1120,
     name: 'Converseer',
+    domain_url: 'converseer.com',
+    source_category: 'Africa',
     tags: [
       'technology',
       'ai',
@@ -143,3 +145,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

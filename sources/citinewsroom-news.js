@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   citinewsroom: {
     id: 1160,
     name: 'Citi Newsroom',
+    domain_url: 'citinewsroom.com',
+    source_category: 'Local',
     tags: ['news', 'ghana', 'politics', 'local', 'current events'],
     origin: 'Ghana',
     credibility: 5,
@@ -200,3 +202,5 @@ module.exports = {
   fetchCitiNewsroomGeneralNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

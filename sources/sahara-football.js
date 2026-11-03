@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSaharaFootballNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'saharafootball.net', 'Sports');

@@ -115,3 +115,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchModernGhanaNews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Africa');

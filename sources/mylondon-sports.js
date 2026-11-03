@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   mylondon: {
     id: 1021,
     name: 'My London',
+    domain_url: 'mylondon.news',
+    source_category: 'Sports',
     tags: ['sport', 'london', 'football', 'premier-league'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -143,3 +145,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

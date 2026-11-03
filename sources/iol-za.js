@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   iol_news: {
     id: 1129,
     name: 'IOL News',
+    domain_url: 'iol.co.za',
+    source_category: 'Africa',
     tags: [
       'news',
       'south-africa',
@@ -152,3 +154,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   ajplus: {
     id: 1031,
     name: 'AJ Plus',
+    domain_url: 'ajplus.net',
+    source_category: 'World',
     tags: ['news', 'global', 'politics', 'culture', 'international'],
     origin: 'International',
     credibility: 4,
@@ -135,3 +137,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

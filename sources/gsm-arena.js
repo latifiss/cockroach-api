@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGSMArenaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'gsmarena.com', 'Technology');

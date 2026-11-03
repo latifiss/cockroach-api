@@ -88,3 +88,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFrance24Culture };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'france24.com', 'Entertainment');

@@ -101,3 +101,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchAndroidCentralNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'androidcentral.com', 'Technology');

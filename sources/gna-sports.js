@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_sports: {
     id: 1166,
     name: 'Ghana News Agency',
+    domain_url: 'gna.org.gh',
+    source_category: 'Sports',
     tags: ['sports', 'ghana', 'local', 'football', 'athletics'],
     origin: 'Ghana',
     credibility: 5,
@@ -163,3 +165,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

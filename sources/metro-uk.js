@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   metro: {
     id: 1029,
     name: 'Metro',
+    domain_url: 'metro.co.uk',
+    source_category: 'Local',
     tags: ['uk', 'news', 'entertainment', 'lifestyle', 'international'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -139,3 +141,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

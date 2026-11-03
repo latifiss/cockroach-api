@@ -67,3 +67,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBuzzfeedPoliticsNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'buzzfeed.com', 'Politics');

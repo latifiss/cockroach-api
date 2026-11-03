@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   graphicgh_entertainment: {
     id: 1163,
     name: 'Graphic',
+    domain_url: 'graphic.com.gh',
+    source_category: 'Entertainment',
     tags: ['entertainment', 'ghana', 'showbiz', 'music', 'movies', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -204,3 +206,5 @@ module.exports = {
   parseGraphicDate,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

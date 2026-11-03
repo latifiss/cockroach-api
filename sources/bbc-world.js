@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBBCWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'bbci.co.uk', 'World');

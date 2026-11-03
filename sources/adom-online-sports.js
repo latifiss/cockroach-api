@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   adomonline: {
     id: 1171,
     name: 'Adom Online',
+    domain_url: 'adomonline.com',
+    source_category: 'Sports',
     tags: [
       'sports',
       'football',
@@ -245,3 +247,5 @@ module.exports = {
   fetchAdomonlineSports,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

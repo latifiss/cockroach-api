@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   yen_ghana_real_estate: {
     id: 1174,
     name: 'Yen',
+    domain_url: 'yen.com.gh',
+    source_category: 'Africa',
     tags: [
       'news',
       'ghana',
@@ -314,3 +316,5 @@ module.exports = {
   fetchYenGhanaRealEstateNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

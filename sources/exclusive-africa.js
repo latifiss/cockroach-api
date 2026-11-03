@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   exclusive_africa: {
     id: 1139,
     name: 'Exclusive Africa',
+    domain_url: 'theexclusiveafrica.net',
+    source_category: 'Africa',
     tags: [
       'news',
       'africa',
@@ -150,3 +152,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

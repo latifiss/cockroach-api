@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanacelebrities_politics: {
     id: 1165,
     name: 'Ghana Celebrities',
+    domain_url: 'ghanacelebrities.com',
+    source_category: 'Politics',
     tags: ['politics', 'ghana', 'local'],
     origin: 'Ghana',
     credibility: 4.5,
@@ -183,3 +185,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

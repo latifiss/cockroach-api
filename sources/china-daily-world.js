@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   chinadaily: {
     id: 1036,
     name: 'China Daily',
+    domain_url: 'chinadaily.com.cn',
+    source_category: 'World',
     tags: ['world', 'international', 'news', 'global'],
     origin: 'China',
     credibility: 4,
@@ -161,3 +163,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

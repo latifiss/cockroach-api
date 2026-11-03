@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   adomonline: {
     id: 1171,
     name: 'Adom Online',
+    domain_url: 'adomonline.com',
+    source_category: 'Business & Finance',
     tags: [
       'business',
       'economy',
@@ -234,3 +236,5 @@ module.exports = {
   fetchAdomonlineBusiness,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

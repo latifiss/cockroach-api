@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanacelebrities_sports: {
     id: 1165,
     name: 'Ghana Celebrities',
+    domain_url: 'ghanacelebrities.com',
+    source_category: 'Sports',
     tags: ['sports', 'ghana', 'football', 'boxing', 'athletics', 'local'],
     origin: 'Ghana',
     credibility: 4.5,
@@ -183,3 +185,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

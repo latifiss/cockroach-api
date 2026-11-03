@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchWindowsCentralNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'windowscentral.com', 'Technology');

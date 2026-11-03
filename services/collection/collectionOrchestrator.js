@@ -28,13 +28,21 @@ async function executeSource(source, options) {
       return {
         sourceId: source.id,
         sourceName: source.name || payload?.source_name || source.id,
+        domain_url: source.domain_url,
+        source_category: source.source_category,
         status: 'succeeded',
         attempts: attempt + 1,
         startedAt,
         completedAt: new Date(),
         durationMs: Date.now() - started,
         articleCount: articles.length,
-        source: payload || {},
+        source: payload && typeof payload === 'object'
+          ? {
+            ...payload,
+            domain_url: source.domain_url,
+            source_category: source.source_category,
+          }
+          : { domain_url: source.domain_url, source_category: source.source_category },
         articles,
         error: null,
       };
@@ -47,6 +55,8 @@ async function executeSource(source, options) {
   return {
     sourceId: source.id,
     sourceName: source.name || source.id,
+    domain_url: source.domain_url,
+    source_category: source.source_category,
     status: 'failed',
     attempts: options.retryAttempts + 1,
     startedAt,

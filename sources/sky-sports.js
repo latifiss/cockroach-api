@@ -117,3 +117,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSkySportsPremierLeagueNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'skysports.com', 'Sports');

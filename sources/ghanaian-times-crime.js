@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanaian_times_africa: {
     id: 1167,
     name: 'Ghanaian Times',
+    domain_url: 'ghanaiantimes.com.gh',
+    source_category: 'Africa',
     tags: ['crime', 'ghana', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -127,3 +129,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

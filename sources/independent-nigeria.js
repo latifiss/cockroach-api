@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   independent_ng: {
     id: 1122,
     name: 'Independent Nigeria',
+    domain_url: 'independent.ng',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -155,3 +157,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

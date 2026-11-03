@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   ameyawdebrah: {
     id: 1155,
     name: 'Ameyaw Debrah',
+    domain_url: 'ameyawdebrah.com',
+    source_category: 'Entertainment',
     tags: [
       'entertainment',
       'ghana',
@@ -173,3 +175,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

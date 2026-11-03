@@ -106,3 +106,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGermanFootballNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'getfootballnewsgermany.com', 'Sports');

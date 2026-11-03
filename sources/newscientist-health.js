@@ -77,3 +77,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNewScientistHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'newscientist.com', 'Science & Health');

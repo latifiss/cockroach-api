@@ -7,6 +7,8 @@ const SOURCE_CONFIG = {
   the_publisher_online: {
     id: 1170,
     name: 'The Publisher',
+    domain_url: 'thepublisheronline.com',
+    source_category: 'Science & Health',
     tags: ['ghana', 'news', 'health'], // Base tags, specific categories will add more
     origin: 'Ghana',
     credibility: 5, // A hypothetical credibility score
@@ -233,3 +235,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

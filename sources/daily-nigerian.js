@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   daily_nigerian: {
     id: 1126,
     name: 'Daily Nigerian',
+    domain_url: 'dailynigerian.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -154,3 +156,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

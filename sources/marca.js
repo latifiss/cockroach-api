@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchMarcaEnglishNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'marca.com', 'Sports');

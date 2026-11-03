@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   techcentral: {
     id: 1136,
     name: 'TechCentral',
+    domain_url: 'techcentral.co.za',
+    source_category: 'Technology',
     tags: ['technology', 'telecoms', 'south-africa', 'ict', 'media'],
     origin: 'South Africa',
     credibility: 4,
@@ -140,3 +142,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

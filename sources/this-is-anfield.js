@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchThisIsAnfieldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'thisisanfield.com', 'Sports');

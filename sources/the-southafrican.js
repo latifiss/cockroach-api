@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   the_south_african: {
     id: 1135,
     name: 'The South African',
+    domain_url: 'thesouthafrican.com',
+    source_category: 'Africa',
     tags: ['news', 'south-africa', 'africa', 'international'],
     origin: 'South Africa',
     credibility: 4,
@@ -143,3 +145,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

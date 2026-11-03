@@ -1,6 +1,10 @@
 const CollectionRun = require('../models/collectionRun.model');
 const SourceHealth = require('../models/sourceHealth.model');
 const { resolveSourceName } = require('../services/collection/sourceRegistry');
+const { sourceRegistry } = require('../services/collection');
+const configuredSourceNames = new Map(sourceRegistry.map(({ id, name }) => [id, name]));
+const configuredSourceDomains = new Map(sourceRegistry.map(({ id, domain_url }) => [id, domain_url]));
+const configuredSourceCategories = new Map(sourceRegistry.map(({ id, source_category }) => [id, source_category]));
 
 function authorizeOperations(req, res, next) {
   const token = process.env.OPS_API_TOKEN;
@@ -19,7 +23,13 @@ async function getSourceHealth(req, res) {
     if (req.query.status) filter.status = req.query.status;
     const sources = await SourceHealth.find(filter).sort({ status: 1, last_attempt_at: -1 }).lean();
     for (const source of sources) {
-      source.source_name = resolveSourceName(source.source_id, source.source_name);
+      source.source_name = resolveSourceName(
+        source.source_id,
+        configuredSourceNames.get(source.source_id),
+        source.source_name
+      );
+      source.domain_url = configuredSourceDomains.get(source.source_id) || source.domain_url;
+      source.source_category = configuredSourceCategories.get(source.source_id) || source.source_category || 'News';
     }
     return res.json({ total: sources.length, sources });
   } catch (error) {

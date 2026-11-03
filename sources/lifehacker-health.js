@@ -77,3 +77,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchLifeHackerHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'lifehacker.com', 'Science & Health');

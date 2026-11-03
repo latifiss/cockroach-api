@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanaweb: {
     id: 1159,
     name: 'GhanaWeb',
+    domain_url: 'ghanaweb.com',
+    source_category: 'Africa',
     tags: ['news', 'ghana', 'politics', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -146,3 +148,5 @@ module.exports = {
   fetchGhanaWebLeadStory,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

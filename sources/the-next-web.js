@@ -75,3 +75,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTheNextWebNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'thenextweb.com', 'Technology');

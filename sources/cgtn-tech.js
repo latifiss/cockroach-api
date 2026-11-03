@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   cgtn: {
     id: 1035,
     name: 'CGTN Tech-Sci',
+    domain_url: 'cgtn.com',
+    source_category: 'Technology',
     tags: ['technology', 'science', 'innovation', 'china'],
     origin: 'China',
     credibility: 4,
@@ -158,3 +160,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

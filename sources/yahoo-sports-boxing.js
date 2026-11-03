@@ -148,3 +148,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchYahooBoxingNews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

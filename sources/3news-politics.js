@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   '3news-politics': {
     id: 1162,
     name: '3News',
+    domain_url: '3news.com',
+    source_category: 'Politics',
     tags: ['news', 'ghana', 'politics', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -216,3 +218,5 @@ module.exports = {
   generateArticleId,
   parse3NewsArticleDate,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

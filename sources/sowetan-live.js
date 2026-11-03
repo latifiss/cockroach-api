@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   sowetan_live: {
     id: 1132,
     name: 'Sowetan Live',
+    domain_url: 'sowetanlive.co.za',
+    source_category: 'Africa',
     tags: [
       'news',
       'south-africa',
@@ -147,3 +149,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

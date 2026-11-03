@@ -145,3 +145,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFoxSportsWomensWorldCupNews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

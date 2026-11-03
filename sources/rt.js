@@ -31,3 +31,5 @@ const fetchRawRSS = (url) => {
     console.error('Error fetching raw XML:', error);
   }
 })();
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'World');

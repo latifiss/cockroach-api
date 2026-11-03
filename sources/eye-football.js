@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchEyeFootballNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'eyefootball.com', 'Sports');

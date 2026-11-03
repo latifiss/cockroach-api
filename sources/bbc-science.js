@@ -81,3 +81,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBBCScienceEnvironmentNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'bbci.co.uk', 'Science & Health');

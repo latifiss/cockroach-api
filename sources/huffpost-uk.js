@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   huffpost: {
     id: 1028,
     name: 'Huffington Post UK',
+    domain_url: 'huffingtonpost.co.uk',
+    source_category: 'News',
     tags: ['uk', 'news', 'politics', 'international'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -146,3 +148,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTheMagNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'themag.co.uk', 'Sports');

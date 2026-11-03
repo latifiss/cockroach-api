@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   graphicgh_business: {
     id: 1163,
     name: 'Graphic',
+    domain_url: 'graphic.com.gh',
+    source_category: 'Business & Finance',
     tags: ['business', 'ghana', 'economy', 'finance', 'markets', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -225,3 +227,5 @@ module.exports = {
   parseGraphicBusinessDate,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

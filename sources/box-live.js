@@ -134,3 +134,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBoxLive };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

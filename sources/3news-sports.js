@@ -7,6 +7,8 @@ const SOURCE_CONFIG = {
   '3news-showbiz': {
     id: 1162,
     name: '3News Showbiz',
+    domain_url: '3news.com',
+    source_category: 'Sports',
     tags: ['sports', 'football', 'ghana', 'athletics', 'boxing'],
     origin: 'Ghana',
     credibility: 5, // Placeholder, adjust as necessary
@@ -256,3 +258,5 @@ module.exports = {
   generateArticleId,
   parse3NewsArticleDate,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

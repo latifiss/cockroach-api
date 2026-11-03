@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   standard: {
     id: 1026,
     name: 'Evening Standard',
+    domain_url: 'standard.co.uk',
+    source_category: 'Local',
     tags: ['london', 'uk', 'news', 'politics', 'international'],
     origin: 'United Kingdom',
     credibility: 4,
@@ -144,3 +146,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

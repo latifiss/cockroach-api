@@ -90,3 +90,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchArsTechnicaTechLab };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'arstechnica.com', 'Technology');

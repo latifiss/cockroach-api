@@ -93,3 +93,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchEngadgetNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'engadget.com', 'Technology');
