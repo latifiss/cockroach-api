@@ -1,5 +1,6 @@
 const CollectionRun = require('../models/collectionRun.model');
 const SourceHealth = require('../models/sourceHealth.model');
+const { resolveSourceName } = require('../services/collection/sourceRegistry');
 
 function authorizeOperations(req, res, next) {
   const token = process.env.OPS_API_TOKEN;
@@ -17,6 +18,9 @@ async function getSourceHealth(req, res) {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
     const sources = await SourceHealth.find(filter).sort({ status: 1, last_attempt_at: -1 }).lean();
+    for (const source of sources) {
+      source.source_name = resolveSourceName(source.source_id, source.source_name);
+    }
     return res.json({ total: sources.length, sources });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to retrieve source health' });

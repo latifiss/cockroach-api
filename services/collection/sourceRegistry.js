@@ -1,11 +1,22 @@
 function humanizeSourceName(value) {
-  return value
+  const sourceName = String(value ?? '').trim();
+  const name = sourceName
     .replace(/^fetch/, '')
     .replace(/(\w)([A-Z])/g, '$1 $2')
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .replace(/\b(Articles|News)\b$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
+
+  return name || sourceName || 'Unknown source';
+}
+
+function resolveSourceName(sourceId, ...candidates) {
+  const name = candidates
+    .map((candidate) => String(candidate ?? '').trim())
+    .find(Boolean);
+
+  return name || humanizeSourceName(sourceId);
 }
 
 function createSourceRegistry(fetchers) {
@@ -25,7 +36,7 @@ function createSourceRegistry(fetchers) {
       throw new Error(`Duplicate source identifier: ${id}`);
     }
 
-    const name = fetcher.sourceName || humanizeSourceName(fetcher.name || id) || id;
+    const name = resolveSourceName(id, fetcher.sourceName, humanizeSourceName(fetcher.name || id));
     seenIds.set(id, fetcher);
     seenFunctions.add(fetcher);
     registry.push(Object.freeze({ id, name, fetch: fetcher }));
@@ -34,4 +45,4 @@ function createSourceRegistry(fetchers) {
   return Object.freeze(registry);
 }
 
-module.exports = { createSourceRegistry, humanizeSourceName };
+module.exports = { createSourceRegistry, humanizeSourceName, resolveSourceName };

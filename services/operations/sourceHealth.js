@@ -1,14 +1,7 @@
-function humanizeSourceId(sourceId) {
-  const value = String(sourceId || 'unknown-source').trim();
-  const name = value
-    .replace(/^fetch/i, '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
-    .replace(/\b(Articles|News)\b$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+const { resolveSourceName } = require('../collection/sourceRegistry');
 
-  return name || value || 'Unknown source';
+function humanizeSourceId(sourceId) {
+  return resolveSourceName(sourceId);
 }
 
 function transitionSourceHealth(previous = {}, outcome, sourceName) {
@@ -19,9 +12,13 @@ function transitionSourceHealth(previous = {}, outcome, sourceName) {
   const totalRuns = (previous.total_runs || 0) + 1;
   const successfulRuns = (previous.successful_runs || 0) + (outcome.status === 'succeeded' ? 1 : 0);
   const failedRuns = (previous.failed_runs || 0) + (outcome.status === 'failed' ? 1 : 0);
-  const resolvedSourceName = String(
-    sourceName || outcome.sourceName || outcome.source?.source_name || previous.source_name || humanizeSourceId(outcome.sourceId)
-  ).trim();
+  const resolvedSourceName = resolveSourceName(
+    outcome.sourceId,
+    sourceName,
+    outcome.sourceName,
+    outcome.source?.source_name,
+    previous.source_name
+  );
 
   let status = 'healthy';
   if (outcome.status === 'failed') {
@@ -30,7 +27,7 @@ function transitionSourceHealth(previous = {}, outcome, sourceName) {
 
   return {
     source_id: outcome.sourceId,
-    source_name: resolvedSourceName || humanizeSourceId(outcome.sourceId),
+    source_name: resolvedSourceName,
     status,
     consecutive_failures: failures,
     total_runs: totalRuns,

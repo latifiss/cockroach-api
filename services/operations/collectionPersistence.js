@@ -1,6 +1,6 @@
 const CollectionRun = require('../../models/collectionRun.model');
 const SourceHealth = require('../../models/sourceHealth.model');
-const { humanizeSourceName } = require('../collection/sourceRegistry');
+const { resolveSourceName } = require('../collection/sourceRegistry');
 const { transitionSourceHealth } = require('./sourceHealth');
 
 async function persistCollectionRun(run) {
@@ -35,11 +35,12 @@ async function persistCollectionRun(run) {
   const operations = [];
   for (const result of run.results) {
     const previous = await SourceHealth.findOne({ source_id: result.sourceId }).lean();
-    const sourceName = result.sourceName
-      || result.source?.source_name
-      || previous?.source_name
-      || humanizeSourceName(result.sourceId)
-      || result.sourceId;
+    const sourceName = resolveSourceName(
+      result.sourceId,
+      result.sourceName,
+      result.source?.source_name,
+      previous?.source_name
+    );
     const health = transitionSourceHealth(previous || {}, result, sourceName);
     operations.push({
       updateOne: {

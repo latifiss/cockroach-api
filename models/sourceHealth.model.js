@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const sourceHealthSchema = new mongoose.Schema({
   source_id: { type: String, required: true, unique: true },
-  source_name: { type: String, default: '' },
+  source_name: { type: String, required: true, trim: true },
   status: { type: String, enum: ['healthy', 'degraded', 'failing', 'unknown'], default: 'unknown', index: true },
   consecutive_failures: { type: Number, default: 0, min: 0 },
   total_runs: { type: Number, default: 0, min: 0 },

@@ -31,6 +31,13 @@ test('source registry ignores repeated references but rejects colliding identifi
   assert.throws(() => createSourceRegistry([repeated, second]), /Duplicate source identifier/);
 });
 
+test('source registry supplies a non-empty name when a source name is blank', () => {
+  const fetchGraphicSportsArticles = async () => ({ articles: [] });
+  fetchGraphicSportsArticles.sourceName = '  ';
+  const [source] = createSourceRegistry([fetchGraphicSportsArticles]);
+  assert.equal(source.name, 'Graphic Sports');
+});
+
 test('collection isolates source failures and reports source outcomes', async () => {
   const registry = createSourceRegistry([
     async () => ({ source_name: 'A', articles: [{ title: 'One' }] }),

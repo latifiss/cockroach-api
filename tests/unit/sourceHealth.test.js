@@ -14,6 +14,16 @@ test('source health becomes degraded after a failure', () => {
   assert.equal(result.status, 'degraded');
   assert.equal(result.consecutive_failures, 1);
   assert.equal(result.failed_runs, 1);
+  assert.equal(result.source_name, 'publisher-a');
+});
+
+test('source health replaces blank names with a humanized source identifier', () => {
+  const result = transitionSourceHealth({ source_name: ' ' }, {
+    sourceId: 'fetchGraphicSportsArticles',
+    sourceName: ' ',
+    status: 'failed',
+  });
+  assert.equal(result.source_name, 'Graphic Sports');
 });
 
 test('source health escalates after repeated failures', () => {
