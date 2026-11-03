@@ -1,3 +1,13 @@
+function humanizeSourceName(value) {
+  return value
+    .replace(/^fetch/, '')
+    .replace(/(\w)([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/\b(Articles|News)\b$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function createSourceRegistry(fetchers) {
   if (!Array.isArray(fetchers)) throw new TypeError('fetchers must be an array');
 
@@ -15,12 +25,13 @@ function createSourceRegistry(fetchers) {
       throw new Error(`Duplicate source identifier: ${id}`);
     }
 
+    const name = fetcher.sourceName || humanizeSourceName(fetcher.name || id) || id;
     seenIds.set(id, fetcher);
     seenFunctions.add(fetcher);
-    registry.push(Object.freeze({ id, fetch: fetcher }));
+    registry.push(Object.freeze({ id, name, fetch: fetcher }));
   });
 
   return Object.freeze(registry);
 }
 
-module.exports = { createSourceRegistry };
+module.exports = { createSourceRegistry, humanizeSourceName };
