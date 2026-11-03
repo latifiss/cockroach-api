@@ -27,6 +27,7 @@ async function executeSource(source, options) {
       const articles = Array.isArray(payload?.articles) ? payload.articles : [];
       return {
         sourceId: source.id,
+        sourceName: source.name || payload?.source_name || source.id,
         status: 'succeeded',
         attempts: attempt + 1,
         startedAt,
@@ -45,6 +46,7 @@ async function executeSource(source, options) {
 
   return {
     sourceId: source.id,
+    sourceName: source.name || source.id,
     status: 'failed',
     attempts: options.retryAttempts + 1,
     startedAt,
