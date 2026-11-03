@@ -19,6 +19,8 @@ Set a long, random OPS_API_TOKEN before exposing the operations routes. When it 
 
 ## Operational endpoints
 
+In an API client's Bearer Token auth setting, enter only the token value; the client adds the `Bearer` prefix. A custom `Authorization` header may contain either `Bearer <OPS_API_TOKEN>` or the token value directly.
+
 All endpoints below require the header `Authorization: Bearer <OPS_API_TOKEN>`.
 
 - `GET /api/operations/sources` — source health. Optional `status=healthy|degraded|failing|unknown`.
