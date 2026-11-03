@@ -34,7 +34,8 @@ async function persistCollectionRun(run) {
   const operations = [];
   for (const result of run.results) {
     const previous = await SourceHealth.findOne({ source_id: result.sourceId }).lean();
-    const health = transitionSourceHealth(previous || {}, result, result.source?.source_name || '');
+    const sourceName = result.sourceName || result.source?.source_name || previous?.source_name || result.sourceId;
+    const health = transitionSourceHealth(previous || {}, result, sourceName);
     operations.push({
       updateOne: {
         filter: { source_id: result.sourceId },
