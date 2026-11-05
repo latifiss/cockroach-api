@@ -45,7 +45,7 @@ async function executeSource(source, options) {
       const resolvedMetadata = getSourceMetadata(source, sourcePayload);
       return {
         sourceId: source.id,
-        publisherId: source.publisher_id || sourcePayload.source_id || null,
+        publisherId: resolvedMetadata.publisher_id,
         sourceName: source.name || sourcePayload.source_name || source.id,
         ...resolvedMetadata,
         status: 'succeeded',
