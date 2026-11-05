@@ -16,9 +16,22 @@ function withTimeout(promise, timeoutMs, sourceId) {
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
 }
 
+function getSourceMetadata(source) {
+  return {
+    source_id: source.id,
+    source_name: source.name,
+    domain_url: source.domain_url,
+    source_category: source.source_category,
+    source_tags: source.source_tags || [],
+    source_origin: source.source_origin || '',
+    source_credibility: source.source_credibility ?? null,
+  };
+}
+
 async function executeSource(source, options) {
   const startedAt = new Date();
   const started = Date.now();
+  const metadata = getSourceMetadata(source);
   let lastError;
 
   for (let attempt = 0; attempt <= options.retryAttempts; attempt += 1) {
@@ -28,8 +41,7 @@ async function executeSource(source, options) {
       return {
         sourceId: source.id,
         sourceName: source.name || payload?.source_name || source.id,
-        domain_url: source.domain_url,
-        source_category: source.source_category,
+        ...metadata,
         status: 'succeeded',
         attempts: attempt + 1,
         startedAt,
@@ -37,12 +49,8 @@ async function executeSource(source, options) {
         durationMs: Date.now() - started,
         articleCount: articles.length,
         source: payload && typeof payload === 'object'
-          ? {
-            ...payload,
-            domain_url: source.domain_url,
-            source_category: source.source_category,
-          }
-          : { domain_url: source.domain_url, source_category: source.source_category },
+          ? { ...metadata, ...payload }
+          : { ...metadata },
         articles,
         error: null,
       };
@@ -55,8 +63,7 @@ async function executeSource(source, options) {
   return {
     sourceId: source.id,
     sourceName: source.name || source.id,
-    domain_url: source.domain_url,
-    source_category: source.source_category,
+    ...metadata,
     status: 'failed',
     attempts: options.retryAttempts + 1,
     startedAt,
