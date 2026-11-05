@@ -108,3 +108,29 @@ test('collection records timeout failures', async () => {
   assert.equal(result.failedCount, 1);
   assert.equal(result.results[0].error.code, 'SOURCE_TIMEOUT');
 });
+
+test('collector payload publisher metadata survives when it is not attached to the fetch function', async () => {
+  const fetchExampleFeed = async () => ({
+    source_id: 'publisher-42',
+    source_name: 'Payload Name',
+    source_origin: 'Ghana',
+    source_tags: ['business'],
+    source_credibility: 3,
+    articles: [{ title: 'A story' }],
+  });
+  attachSourceDomainUrl({ fetchExampleFeed }, 'example.com', 'Business & Finance');
+
+  const [source] = createSourceRegistry([fetchExampleFeed]);
+  const result = await runCollection([source], { retryAttempts: 0 });
+  const outcome = result.results[0];
+
+  assert.equal(outcome.sourceId, 'fetchExampleFeed');
+  assert.equal(outcome.source_id, 'publisher-42');
+  assert.equal(outcome.publisher_id, 'publisher-42');
+  assert.equal(outcome.collector_id, 'fetchExampleFeed');
+  assert.equal(outcome.source.source_id, 'publisher-42');
+  assert.equal(outcome.source.source_name, 'Payload Name');
+  assert.equal(outcome.source.domain_url, 'example.com');
+  assert.equal(outcome.source.source_category, 'Business & Finance');
+  assert.equal(outcome.source.source_credibility, 3);
+});
