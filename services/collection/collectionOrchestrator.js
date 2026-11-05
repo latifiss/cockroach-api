@@ -16,17 +16,18 @@ function withTimeout(promise, timeoutMs, sourceId) {
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
 }
 
-function getSourceMetadata(source) {
+function getSourceMetadata(source, payload = {}) {
+  const publisherId = source.publisher_id || payload.publisher_id || payload.source_id || null;
   return {
-    source_id: source.publisher_id || source.id,
-    publisher_id: source.publisher_id || null,
+    source_id: publisherId || source.id,
+    publisher_id: publisherId,
     collector_id: source.id,
-    source_name: source.name,
-    domain_url: source.domain_url,
-    source_category: source.source_category,
-    source_tags: source.source_tags || [],
-    source_origin: source.source_origin || '',
-    source_credibility: source.source_credibility ?? null,
+    source_name: source.name || payload.source_name || source.id,
+    domain_url: source.domain_url || payload.domain_url || '',
+    source_category: source.source_category || payload.source_category || 'News',
+    source_tags: source.source_tags || payload.source_tags || [],
+    source_origin: source.source_origin || payload.source_origin || '',
+    source_credibility: source.source_credibility ?? payload.source_credibility ?? null,
   };
 }
 
@@ -41,11 +42,12 @@ async function executeSource(source, options) {
       const payload = await withTimeout(Promise.resolve().then(() => source.fetch()), options.timeoutMs, source.id);
       const articles = Array.isArray(payload?.articles) ? payload.articles : [];
       const sourcePayload = payload && typeof payload === 'object' ? payload : {};
+      const resolvedMetadata = getSourceMetadata(source, sourcePayload);
       return {
         sourceId: source.id,
         publisherId: source.publisher_id || sourcePayload.source_id || null,
         sourceName: source.name || sourcePayload.source_name || source.id,
-        ...metadata,
+        ...resolvedMetadata,
         status: 'succeeded',
         attempts: attempt + 1,
         startedAt,
@@ -54,9 +56,7 @@ async function executeSource(source, options) {
         articleCount: articles.length,
         source: {
           ...sourcePayload,
-          ...metadata,
-          source_id: source.publisher_id || sourcePayload.source_id || source.id,
-          publisher_id: source.publisher_id || sourcePayload.source_id || null,
+          ...resolvedMetadata,
           collector_id: source.id,
           source_name: source.name || sourcePayload.source_name || source.id,
           source_link: sourcePayload.source_link || sourcePayload.sourceLink || '',
