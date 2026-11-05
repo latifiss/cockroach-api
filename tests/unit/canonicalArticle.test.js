@@ -32,3 +32,33 @@ test('deduplication retains the most complete record for an identity', () => {
   const complete = { identity_key: 'same', title: 'Story', description: 'Description', image_url: 'image' };
   assert.deepEqual(deduplicateCanonicalArticles([sparse, complete]), [complete]);
 });
+
+test('preserves publisher metadata without mixing publisher and article categories', () => {
+  const article = normalizeArticle({
+    title: 'Publisher metadata story',
+    link: 'https://example.com/story',
+    categories: ['Politics'],
+  }, {
+    source_id: 'publisher-42',
+    publisher_id: 'publisher-42',
+    collector_id: 'fetchExamplePolitics',
+    source_name: 'Example News',
+    domain_url: 'example.com',
+    source_category: 'News',
+    source_credibility: 4,
+    source_origin: 'Ghana',
+    source_tags: ['ghana', 'politics'],
+    source_link: 'https://example.com',
+  });
+
+  assert.equal(article.source_id, 'publisher-42');
+  assert.equal(article.publisher_id, 'publisher-42');
+  assert.equal(article.collector_id, 'fetchExamplePolitics');
+  assert.equal(article.source_name, 'Example News');
+  assert.equal(article.domain_url, 'example.com');
+  assert.equal(article.source_category, 'News');
+  assert.equal(article.source_credibility, 4);
+  assert.equal(article.source_origin, 'Ghana');
+  assert.deepEqual(article.source_tags, ['ghana', 'politics']);
+  assert.deepEqual(article.categories, ['Politics']);
+});
