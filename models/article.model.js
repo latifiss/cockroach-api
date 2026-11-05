@@ -105,13 +105,6 @@ const articleSchema = new Schema(
     source_link: {
       type: String,
     },
-    source_tags: [
-      {
-        type: String,
-        required: true,
-        trim: true,
-      },
-    ],
   },
   {
     timestamps: true,
