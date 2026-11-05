@@ -17,11 +17,12 @@ function withTimeout(promise, timeoutMs, sourceId) {
 }
 
 function normalizeSourceError(error) {
-  const status = Number(error?.status || error?.response?.status);
+  const message = typeof error === 'string' ? error : error?.message || 'Source collection failed';
+  const status = Number(error?.status || error?.response?.status || message.match(/\\b(?:HTTP\\s*)?(4\\d{2}|5\\d{2})\\b/i)?.[1]);
   return {
     name: error?.name || 'Error',
     code: error?.code || (status ? `HTTP_${status}` : 'SOURCE_FETCH_FAILED'),
-    message: typeof error === 'string' ? error : error?.message || 'Source collection failed',
+    message,
   };
 }
 
