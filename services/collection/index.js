@@ -3,8 +3,29 @@ const { loadRuntimeConfig } = require('../../config/runtime');
 const { createSourceRegistry } = require('./sourceRegistry');
 const { runCollection } = require('./collectionOrchestrator');
 const { normalizeArticle, deduplicateCanonicalArticles } = require('../articles/canonicalArticle');
+const { createLogger } = require('../../utils/logger');
 
 const registry = createSourceRegistry(newsSources);
+const logger = createLogger({ pretty: true });
+
+function logCollectionSummary(run) {
+  logger.info('NEWS COLLECTION STARTED');
+  logger.info('Registered sources', { count: run.sourceCount });
+  logger.info('COLLECTION SUMMARY', {
+    successful: run.succeededCount,
+    failed: run.failedCount,
+    articles: run.articleCount,
+    duration: `${(run.durationMs / 1000).toFixed(1)}s`,
+  });
+
+  for (const result of run.results.filter((item) => item.status === 'failed')) {
+    logger.warn(result.sourceName, {
+      code: result.error?.code || 'SOURCE_FETCH_FAILED',
+      message: result.error?.message || 'Source collection failed',
+      attempts: result.attempts,
+    });
+  }
+}
 
 async function collectCanonicalArticles(options = {}) {
   const config = loadRuntimeConfig();
@@ -15,6 +36,7 @@ async function collectCanonicalArticles(options = {}) {
     retryDelayMs: options.retryDelayMs ?? config.collectionRetryDelayMs,
   });
 
+  logCollectionSummary(run);
   const articles = [];
   for (const result of run.results) {
     if (result.status !== 'succeeded') continue;
@@ -24,10 +46,9 @@ async function collectCanonicalArticles(options = {}) {
     }
   }
 
-  return {
-    ...run,
-    articles: deduplicateCanonicalArticles(articles),
-  };
+  const normalizedArticles = deduplicateCanonicalArticles(articles);
+  logger.info('Articles normalized', { count: normalizedArticles.length });
+  return { ...run, articles: normalizedArticles };
 }
 
-module.exports = { collectCanonicalArticles, sourceRegistry: registry };
+module.exports = { collectCanonicalArticles, sourceRegistry: registry, logCollectionSummary };
