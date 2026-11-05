@@ -32,11 +32,12 @@ function createSourceRegistry(fetchers) {
     if (typeof fetcher !== 'function') throw new TypeError(`Source at index ${index} must be a function`);
     if (seenFunctions.has(fetcher)) return;
 
-    const id = String(fetcher.sourceId || fetcher.name || `source-${index + 1}`);
+    const id = String(fetcher.name || `source-${index + 1}`);
     const existing = seenIds.get(id);
     if (existing && existing !== fetcher) {
-      throw new Error(`Duplicate source identifier: ${id}`);
+      throw new Error(`Duplicate collector identifier: ${id}`);
     }
+    const publisherId = String(fetcher.sourceId ?? '').trim() || null;
 
     const name = resolveSourceName(id, fetcher.sourceName, humanizeSourceName(fetcher.name || id));
     const domainUrl = String(fetcher.domainUrl || '').trim();
@@ -53,6 +54,7 @@ function createSourceRegistry(fetchers) {
     seenFunctions.add(fetcher);
     registry.push(Object.freeze({
       id,
+      publisher_id: publisherId,
       name,
       domain_url: domainUrl,
       source_category: sourceCategory,
