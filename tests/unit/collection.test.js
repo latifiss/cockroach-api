@@ -23,13 +23,21 @@ test('mapWithConcurrency rejects invalid limits', async () => {
   await assert.rejects(mapWithConcurrency([], 0, async () => {}), /concurrency/);
 });
 
-test('source registry ignores repeated references but rejects colliding identifiers', () => {
-  const repeated = () => {};
-  repeated.sourceId = 'publisher-a';
-  assert.equal(createSourceRegistry([repeated, repeated]).length, 1);
-  const second = () => {};
-  second.sourceId = 'publisher-a';
-  assert.throws(() => createSourceRegistry([repeated, second]), /Duplicate source identifier/);
+test('source registry allows multiple collectors for one publisher but rejects duplicate collector identifiers', () => {
+  const fetchPublisherFeedA = () => {};
+  fetchPublisherFeedA.sourceId = '1004';
+  const fetchPublisherFeedB = () => {};
+  fetchPublisherFeedB.sourceId = '1004';
+
+  const registry = createSourceRegistry([fetchPublisherFeedA, fetchPublisherFeedA, fetchPublisherFeedB]);
+  assert.equal(registry.length, 2);
+  assert.equal(registry[0].id, 'fetchPublisherFeedA');
+  assert.equal(registry[1].id, 'fetchPublisherFeedB');
+  assert.equal(registry[0].publisher_id, '1004');
+  assert.equal(registry[1].publisher_id, '1004');
+
+  const duplicateCollector = function fetchPublisherFeedA() {};
+  assert.throws(() => createSourceRegistry([fetchPublisherFeedA, duplicateCollector]), /Duplicate collector identifier/);
 });
 
 test('source registry supplies a non-empty name when a source name is blank', () => {
@@ -51,6 +59,7 @@ test('source registry uses the configured name for failed sources', async () => 
   const result = await runCollection(registry, { retryAttempts: 0 });
 
   assert.equal(result.results[0].sourceName, '3News');
+  assert.equal(result.results[0].sourceId, 'fetch3NewsBusiness');
   assert.equal(result.results[0].domain_url, '3news.com');
   assert.equal(result.results[0].source_category, 'Sports');
 });
