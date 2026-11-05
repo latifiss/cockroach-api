@@ -98,13 +98,6 @@ const fetchNewsGhanaTravelNews = async () => {
       articles: articles,
     };
   } catch (error) {
-    console.error(
-      `Error fetching NewsGhana travel & tourism news: ${error.message}`,
-      {
-        url: newsUrl,
-        stack: error.stack,
-      }
-    );
     return {
       ...SOURCE_CONFIG.newsghana_travel,
       source_link: newsUrl,
