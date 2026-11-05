@@ -188,13 +188,6 @@ const fetchYenEntertainmentNews = async () => {
       articles: articles,
     };
   } catch (error) {
-    console.error(
-      `Error fetching Yen.com.gh entertainment news: ${error.message}`,
-      {
-        url: newsUrl,
-        stack: error.stack,
-      }
-    );
     return {
       ...SOURCE_CONFIG.yen_entertainment,
       source_link: newsUrl,
