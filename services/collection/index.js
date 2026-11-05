@@ -9,8 +9,7 @@ const registry = createSourceRegistry(newsSources);
 const logger = createLogger({ pretty: true });
 
 function logCollectionSummary(run) {
-  logger.info('NEWS COLLECTION STARTED');
-  logger.info('Registered sources', { count: run.sourceCount });
+  logger.info('NEWS COLLECTION FINISHED');
   logger.info('COLLECTION SUMMARY', {
     successful: run.succeededCount,
     failed: run.failedCount,
@@ -29,6 +28,8 @@ function logCollectionSummary(run) {
 
 async function collectCanonicalArticles(options = {}) {
   const config = loadRuntimeConfig();
+  logger.info('NEWS COLLECTION STARTED');
+  logger.info('Registered sources', { count: registry.length });
   const run = await runCollection(registry, {
     concurrency: options.concurrency ?? config.collectionConcurrency,
     timeoutMs: options.timeoutMs ?? config.collectionTimeoutMs,
