@@ -19,7 +19,8 @@ function withTimeout(promise, timeoutMs, sourceId) {
 function getSourceMetadata(source) {
   return {
     source_id: source.publisher_id || source.id,
-    publisher_id: source.publisher_id,
+    publisher_id: source.publisher_id || null,
+    collector_id: source.id,
     source_name: source.name,
     domain_url: source.domain_url,
     source_category: source.source_category,
@@ -39,10 +40,11 @@ async function executeSource(source, options) {
     try {
       const payload = await withTimeout(Promise.resolve().then(() => source.fetch()), options.timeoutMs, source.id);
       const articles = Array.isArray(payload?.articles) ? payload.articles : [];
+      const sourcePayload = payload && typeof payload === 'object' ? payload : {};
       return {
         sourceId: source.id,
-        publisherId: source.publisher_id || payload?.source_id || null,
-        sourceName: source.name || payload?.source_name || source.id,
+        publisherId: source.publisher_id || sourcePayload.source_id || null,
+        sourceName: source.name || sourcePayload.source_name || source.id,
         ...metadata,
         status: 'succeeded',
         attempts: attempt + 1,
@@ -51,10 +53,13 @@ async function executeSource(source, options) {
         durationMs: Date.now() - started,
         articleCount: articles.length,
         source: {
+          ...sourcePayload,
           ...metadata,
-          ...(payload && typeof payload === 'object' ? payload : {}),
-          source_id: source.publisher_id || payload?.source_id || source.id,
-          publisher_id: source.publisher_id || payload?.source_id || null,
+          source_id: source.publisher_id || sourcePayload.source_id || source.id,
+          publisher_id: source.publisher_id || sourcePayload.source_id || null,
+          collector_id: source.id,
+          source_name: source.name || sourcePayload.source_name || source.id,
+          source_link: sourcePayload.source_link || sourcePayload.sourceLink || '',
         },
         articles,
         error: null,
