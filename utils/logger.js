@@ -8,18 +8,27 @@ function serializeError(error) {
 function createLogger(options = {}) {
   const threshold = LEVELS[options.level || process.env.LOG_LEVEL || 'info'] ?? LEVELS.info;
   const sink = options.sink || console;
+  const pretty = options.pretty === true;
 
   function write(level, message, context = {}) {
     if (LEVELS[level] < threshold) return;
+    if (pretty) {
+      const details = Object.entries(context)
+        .map(([key, value]) => `${key}: ${value instanceof Error ? value.message : typeof value === 'object' ? JSON.stringify(value) : value}`)
+        .join(' | ');
+      const prefix = { debug: '🔎', info: 'ℹ️', warn: '⚠️', error: '❌' }[level];
+      const method = level === 'debug' ? 'log' : level;
+      (sink[method] || sink.log).call(sink, `${prefix} ${message}${details ? ` — ${details}` : ''}`);
+      return;
+    }
     const record = {
       timestamp: new Date().toISOString(),
       level,
       message: String(message),
       ...Object.fromEntries(Object.entries(context).map(([key, value]) => [key, serializeError(value)])),
     };
-    const output = JSON.stringify(record);
     const method = level === 'debug' ? 'log' : level;
-    (sink[method] || sink.log).call(sink, output);
+    (sink[method] || sink.log).call(sink, JSON.stringify(record));
   }
 
   return Object.freeze({
