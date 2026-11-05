@@ -38,8 +38,10 @@ function normalizeArticle(article, source = {}) {
   const title = normalizeText(article.title);
   if (!title) return null;
 
-  const sourceId = normalizeText(article.source_id || source.source_id || source.sourceId || source.source_name || source.sourceName);
-  const sourceName = normalizeText(article.source_name || source.source_name || source.sourceName);
+  const sourceId = normalizeText(source.source_id || source.publisher_id || article.source_id || source.source_name || source.sourceName);
+  const publisherId = normalizeText(source.publisher_id || source.source_id || article.publisher_id || article.source_id);
+  const collectorId = normalizeText(source.collector_id || source.collectorId);
+  const sourceName = normalizeText(source.source_name || source.sourceName || article.source_name);
   const url = canonicalizeUrl(article.link || article.url || article.source_link);
   const titleFingerprint = hash(title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim());
   const identity = url
@@ -50,6 +52,13 @@ function normalizeArticle(article, source = {}) {
 
   const publishedAt = article.published_at || article.pubDate || article.publishedAt || null;
   const parsedDate = publishedAt ? new Date(publishedAt) : null;
+  const sourceTags = Array.isArray(source.source_tags)
+    ? source.source_tags
+    : Array.isArray(source.sourceTags)
+      ? source.sourceTags
+      : Array.isArray(article.source_tags)
+        ? article.source_tags
+        : [];
 
   return {
     article_id: hash(identity),
@@ -62,10 +71,15 @@ function normalizeArticle(article, source = {}) {
     link: url || normalizeText(article.link || article.url),
     image_url: normalizeText(article.image_url || article.image || article.thumbnail),
     source_id: sourceId,
+    publisher_id: publisherId || sourceId,
+    collector_id: collectorId,
     source_name: sourceName,
-    source_link: normalizeText(source.source_link || source.sourceLink),
-    source_origin: normalizeText(source.source_origin || source.sourceOrigin),
-    source_tags: Array.isArray(source.source_tags) ? source.source_tags : [],
+    domain_url: normalizeText(source.domain_url || source.domainUrl || article.domain_url),
+    source_category: normalizeText(source.source_category || source.sourceCategory || article.source_category) || 'News',
+    source_credibility: source.source_credibility ?? source.sourceCredibility ?? article.source_credibility ?? null,
+    source_link: normalizeText(source.source_link || source.sourceLink || article.source_link),
+    source_origin: normalizeText(source.source_origin || source.sourceOrigin || article.source_origin),
+    source_tags: sourceTags,
     published_at: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
     has_image: Boolean(article.has_image || article.image_url || article.image || article.thumbnail),
     creator: normalizeText(article.creator || source.creator),
