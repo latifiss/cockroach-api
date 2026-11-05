@@ -22,9 +22,6 @@ const fetchBuzzfeedHealthNews = async () => {
 
   try {
     const feed = await parser.parseURL(rssUrl);
-    console.log(
-      `Successfully fetched ${feed.items.length} articles from Buzzfeed Health`
-    );
 
     return {
       source_id: 1000,
@@ -66,6 +63,7 @@ const fetchBuzzfeedHealthNews = async () => {
       source_origin: 'United States',
       source_tags: ['health'],
       articles: [],
+      error: { code: error?.response?.status ? `HTTP_${error.response.status}` : error.code || 'SOURCE_FETCH_FAILED', message: error.message },
     };
   }
 };
