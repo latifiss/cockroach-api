@@ -17,7 +17,7 @@ function withTimeout(promise, timeoutMs, sourceId) {
 }
 
 function getSourceMetadata(source, payload = {}) {
-  const publisherId = source.publisher_id || payload.publisher_id || payload.source_id || null;
+  const publisherId = String(source.publisher_id ?? payload.publisher_id ?? payload.source_id ?? '').trim() || null;
   return {
     source_id: publisherId || source.id,
     publisher_id: publisherId,
