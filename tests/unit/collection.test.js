@@ -118,6 +118,7 @@ test('collector payload publisher metadata survives when it is not attached to t
     source_credibility: 3,
     articles: [{ title: 'A story' }],
   });
+  fetchExampleFeed.sourceName = 'Payload Name';
   attachSourceDomainUrl({ fetchExampleFeed }, 'example.com', 'Business & Finance');
 
   const [source] = createSourceRegistry([fetchExampleFeed]);
@@ -133,4 +134,6 @@ test('collector payload publisher metadata survives when it is not attached to t
   assert.equal(outcome.source.domain_url, 'example.com');
   assert.equal(outcome.source.source_category, 'Business & Finance');
   assert.equal(outcome.source.source_credibility, 3);
+  assert.deepEqual(outcome.source.source_tags, ['business']);
+  assert.equal(outcome.source.source_origin, 'Ghana');
 });
