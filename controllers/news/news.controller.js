@@ -27,10 +27,26 @@ const updateNewsInDB = async (req, res) => {
           const result = await fetch();
           console.log(
             `✅ Fetched ${result.articles?.length || 0} from ${
-              result.source_name
+              result.source_name || fetch.sourceName || fetch.name
             }`
           );
-          return result;
+          return {
+            ...result,
+            source_id: result.source_id || result.publisher_id || fetch.sourceId || 'unknown',
+            publisher_id: result.publisher_id || result.source_id || fetch.sourceId || 'unknown',
+            collector_id: result.collector_id || fetch.name || '',
+            source_name: result.source_name || fetch.sourceName || fetch.name || 'Unknown source',
+            domain_url: result.domain_url || fetch.domainUrl || '',
+            source_category: result.source_category || fetch.sourceCategory || 'News',
+            source_credibility: result.source_credibility ?? fetch.sourceCredibility ?? null,
+            source_link: result.source_link || result.sourceLink || '',
+            source_origin: result.source_origin || fetch.sourceOrigin || '',
+            source_tags: Array.isArray(result.source_tags)
+              ? result.source_tags
+              : Array.isArray(fetch.sourceTags)
+                ? fetch.sourceTags
+                : [],
+          };
         } catch (error) {
           console.error('❌ Fetch error:', error.message);
           return { articles: [], source_name: 'unknown' };
@@ -45,9 +61,16 @@ const updateNewsInDB = async (req, res) => {
           ...a,
           title: cleanText(a.title),
           meta: a.meta || cleanText(a.title),
-          source_name: source.source_name || 'unknown',
+          source_id: source.source_id || source.publisher_id || 'unknown',
+          publisher_id: source.publisher_id || source.source_id || 'unknown',
+          collector_id: source.collector_id || '',
+          source_name: source.source_name || 'Unknown source',
+          domain_url: source.domain_url || '',
+          source_category: source.source_category || 'News',
+          source_credibility: source.source_credibility ?? null,
+          source_link: source.source_link || a.source_link || a.canonical_url || a.link || a.url || '',
           source_origin: source.source_origin || '',
-          source_tags: source.source_tags || [],
+          source_tags: Array.isArray(source.source_tags) ? source.source_tags : [],
           relevance_score: rankArticle(a, source) || 0,
         }));
         allArticles.push(...enriched);
