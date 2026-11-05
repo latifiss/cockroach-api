@@ -25,7 +25,7 @@ function getSourceMetadata(source, payload = {}) {
     source_name: source.name || payload.source_name || source.id,
     domain_url: source.domain_url || payload.domain_url || '',
     source_category: source.source_category || payload.source_category || 'News',
-    source_tags: source.source_tags || payload.source_tags || [],
+    source_tags: source.source_tags?.length ? source.source_tags : payload.source_tags || [],
     source_origin: source.source_origin || payload.source_origin || '',
     source_credibility: source.source_credibility ?? payload.source_credibility ?? null,
   };
