@@ -32,7 +32,7 @@ function createSourceRegistry(fetchers) {
     if (typeof fetcher !== 'function') throw new TypeError(`Source at index ${index} must be a function`);
     if (seenFunctions.has(fetcher)) return;
 
-    const id = fetcher.sourceId || fetcher.name || `source-${index + 1}`;
+    const id = String(fetcher.sourceId || fetcher.name || `source-${index + 1}`);
     const existing = seenIds.get(id);
     if (existing && existing !== fetcher) {
       throw new Error(`Duplicate source identifier: ${id}`);
@@ -44,6 +44,11 @@ function createSourceRegistry(fetchers) {
     if (!SOURCE_CATEGORIES.has(sourceCategory)) {
       throw new Error(`Source ${id} has an invalid source_category: ${sourceCategory}`);
     }
+
+    const sourceTags = Array.isArray(fetcher.sourceTags) ? [...fetcher.sourceTags] : [];
+    const sourceOrigin = String(fetcher.sourceOrigin || '').trim();
+    const sourceCredibility = fetcher.sourceCredibility ?? null;
+
     seenIds.set(id, fetcher);
     seenFunctions.add(fetcher);
     registry.push(Object.freeze({
@@ -51,6 +56,9 @@ function createSourceRegistry(fetchers) {
       name,
       domain_url: domainUrl,
       source_category: sourceCategory,
+      source_tags: Object.freeze(sourceTags),
+      source_origin: sourceOrigin,
+      source_credibility: sourceCredibility,
       fetch: fetcher,
     }));
   });
