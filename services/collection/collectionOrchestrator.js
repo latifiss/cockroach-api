@@ -18,7 +18,8 @@ function withTimeout(promise, timeoutMs, sourceId) {
 
 function getSourceMetadata(source) {
   return {
-    source_id: source.id,
+    source_id: source.publisher_id || source.id,
+    publisher_id: source.publisher_id,
     source_name: source.name,
     domain_url: source.domain_url,
     source_category: source.source_category,
@@ -40,6 +41,7 @@ async function executeSource(source, options) {
       const articles = Array.isArray(payload?.articles) ? payload.articles : [];
       return {
         sourceId: source.id,
+        publisherId: source.publisher_id || payload?.source_id || null,
         sourceName: source.name || payload?.source_name || source.id,
         ...metadata,
         status: 'succeeded',
@@ -48,9 +50,12 @@ async function executeSource(source, options) {
         completedAt: new Date(),
         durationMs: Date.now() - started,
         articleCount: articles.length,
-        source: payload && typeof payload === 'object'
-          ? { ...metadata, ...payload }
-          : { ...metadata },
+        source: {
+          ...metadata,
+          ...(payload && typeof payload === 'object' ? payload : {}),
+          source_id: source.publisher_id || payload?.source_id || source.id,
+          publisher_id: source.publisher_id || payload?.source_id || null,
+        },
         articles,
         error: null,
       };
@@ -62,6 +67,7 @@ async function executeSource(source, options) {
 
   return {
     sourceId: source.id,
+    publisherId: source.publisher_id,
     sourceName: source.name || source.id,
     ...metadata,
     status: 'failed',
