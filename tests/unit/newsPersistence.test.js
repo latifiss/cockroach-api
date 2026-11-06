@@ -25,8 +25,11 @@ test('prepares clusters with one occurrence of each article identity', () => {
 
   const prepared = prepareClusters([[first, duplicate], [duplicate, second]]);
 
-  assert.equal(prepared.length, 1);
-  assert.deepEqual(prepared[0].articles.map((item) => item.article_id), ['article-1', 'article-2']);
+  assert.equal(prepared.length, 2);
+  assert.deepEqual(prepared.map((cluster) => cluster.articles.map((item) => item.article_id)), [
+    ['article-1'],
+    ['article-2'],
+  ]);
   assert.equal(prepared[0].articles[0].title, 'Better story');
 });
 
