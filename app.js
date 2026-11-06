@@ -16,7 +16,7 @@ const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
 const operationsRouter = require('./routes/operations.routes');
 const { updateNewsCache } = require('./controllers/news/feed.controller');
-const { intelligencePipelineJob } = require('./jobs/intelligencePipeline.job');
+const { intelligencePipelineJob, executePipeline } = require('./jobs/intelligencePipeline.job');
 
 if (cluster.isPrimary) {
   logger.info('Primary process started', { pid: process.pid });
@@ -98,6 +98,7 @@ if (cluster.isPrimary) {
       if (process.env.SCHEDULER_WORKER === 'true') {
         intelligencePipelineJob.start();
         logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 2 });
+        executePipeline().catch((error) => logger.error('Initial pipeline execution failed', { error }));
         updateNewsCache().catch((error) => logger.error('Initial news cache refresh failed', { error }));
       }
     } catch (error) {
