@@ -85,7 +85,7 @@ async function executePipeline() {
   try {
     leaseAcquired = await acquirePipelineLease();
     if (!leaseAcquired) {
-      logger.debug('Intelligence pipeline skipped because another instance owns the scheduler lease');
+      logger.warn('Intelligence pipeline skipped because another instance owns the scheduler lease');
       return null;
     }
 
