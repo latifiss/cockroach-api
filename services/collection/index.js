@@ -10,11 +10,7 @@ const logger = createLogger({ pretty: true });
 
 function withCleanScraperErrors(callback) {
   const originalError = console.error;
-  console.error = (...args) => {
-    const message = String(args[0] ?? '');
-    if (/^(Error fetching|Failed to fetch|Error parsing|Error extracting)/i.test(message)) return;
-    originalError(...args);
-  };
+  console.error = () => {};
 
   return Promise.resolve()
     .then(callback)
