@@ -73,7 +73,7 @@ async function updatePipelineStage(collectionRunId, stage, status = 'running', e
 
 async function executePipeline() {
   if (running) {
-    logger.warn('Intelligence pipeline skipped because a previous run is still active');
+    logger.warn('⏭️ Pipeline skipped; previous run is still active');
     return null;
   }
   running = true;
@@ -85,11 +85,11 @@ async function executePipeline() {
   try {
     leaseAcquired = await acquirePipelineLease();
     if (!leaseAcquired) {
-      logger.warn('Intelligence pipeline skipped because another instance owns the scheduler lease');
+      logger.warn('🔒 Pipeline skipped; another scheduler owns the lease');
       return null;
     }
 
-    logger.info('Intelligence pipeline started');
+    logger.info('🚀 Intelligence pipeline started');
     const collection = await collectCanonicalArticles();
     collectionRun = await persistCollectionRun(collection);
 
@@ -104,15 +104,15 @@ async function executePipeline() {
 
     currentStage = 'latest_persistence';
     await updatePipelineStage(collectionRun._id, currentStage);
-    logger.info('Latest article persistence started', { articles: collection.articles.length });
+    logger.info('💾 Latest article persistence started', { articles: collection.articles.length });
     const latest = await persistLatestArticles(collection.articles);
-    logger.info('Latest article persistence finished', {
+    logger.info('✅ Latest article persistence finished', {
       upserted: latest.upserted, modified: latest.modified, batches: latest.batches,
     });
 
     currentStage = 'clustering';
     await updatePipelineStage(collectionRun._id, currentStage);
-    logger.info('Article clustering started', { articles: collection.articles.length });
+    logger.info('🧠 Article clustering started', { articles: collection.articles.length });
     const articles = collection.articles.map((article) => ({
       ...article,
       slug: `${generateSlug(article.title) || 'article'}-${article.article_id.slice(0, 10)}`,
@@ -124,12 +124,12 @@ async function executePipeline() {
       source_link: article.source_link || article.canonical_url || article.link || '',
     }));
     const clusters = articles.length ? await clusterNewsArticles(articles, 0.7) : [];
-    logger.info('Article clustering finished', { articles: articles.length, clusters: clusters.length });
+    logger.info('✅ Article clustering finished', { articles: articles.length, clusters: clusters.length });
 
     currentStage = 'news_persistence';
     await updatePipelineStage(collectionRun._id, currentStage);
     const clusterPersistence = await persistClusters(clusters);
-    logger.info('News cluster persistence finished', {
+    logger.info('💾 News cluster persistence finished', {
       clusters: clusterPersistence.attempted,
       upserted: clusterPersistence.upserted,
       modified: clusterPersistence.modified,
@@ -142,7 +142,7 @@ async function executePipeline() {
     await updateNewsCache();
 
     await updatePipelineStage(collectionRun._id, 'completed', 'completed');
-    logger.info('Intelligence pipeline completed', {
+    logger.info('🎉 Intelligence pipeline completed', {
       durationMs: Date.now() - startedAt,
       sources: collection.sourceCount,
       successfulSources: collection.succeededCount,
@@ -157,7 +157,7 @@ async function executePipeline() {
       await updatePipelineStage(collectionRun._id, currentStage, 'failed', error.message)
         .catch((persistenceError) => logger.error('Failed to record pipeline failure', { error: persistenceError }));
     }
-    logger.error('Intelligence pipeline failed', { stage: currentStage, error, bulkWrite: error.bulkWrite || null });
+    logger.error('💥 Intelligence pipeline failed', { stage: currentStage, error, bulkWrite: error.bulkWrite || null });
     throw error;
   } finally {
     if (leaseAcquired) {
