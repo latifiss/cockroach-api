@@ -72,7 +72,7 @@ const fetchGuardianUKBusinessNews = async () => {
           item.title,
           item.link,
           websiteName,
-          item.pubDate
+          item.pubDate,
         ),
         title: item.title.trim(),
         link: item.link,
@@ -81,7 +81,7 @@ const fetchGuardianUKBusinessNews = async () => {
           : [],
         image_url: getImageUrl(item),
         description: cleanDescription(
-          item.content || item.contentSnippet || item.description
+          item.content || item.contentSnippet || item.description,
         ),
         published_at: item.isoDate || item.pubDate,
         categories: cleanCategories(item.categories),
@@ -103,7 +103,7 @@ const fetchGuardianUKBusinessNews = async () => {
       {
         url: rssUrl,
         stack: error.stack,
-      }
+      },
     );
     return {
       ...SOURCE_CONFIG.guardian,
@@ -119,7 +119,7 @@ const main = async () => {
     const response = await fetchGuardianUKBusinessNews();
     console.log(JSON.stringify(response, null, 2));
     console.log(
-      `Fetched ${response.articles.length} articles from The Guardian UK Business`
+      `Fetched ${response.articles.length} articles from The Guardian UK Business`,
     );
 
     if (response.articles.length > 0) {
@@ -149,4 +149,7 @@ module.exports = {
   cleanCategories,
 };
 
-require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);
+require('../utils/sourceConfig').attachSourceConfigName(
+  module.exports,
+  SOURCE_CONFIG,
+);
