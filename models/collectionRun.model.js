@@ -17,6 +17,7 @@ const sourceOutcomeSchema = new mongoose.Schema({
 const collectionRunSchema = new mongoose.Schema({
   status: { type: String, enum: ['running', 'completed', 'completed_with_errors', 'failed'], required: true },
   pipeline_status: { type: String, enum: ['pending', 'running', 'completed', 'failed', 'skipped'], default: 'pending', index: true },
+  pipeline_stage: { type: String, default: null },
   pipeline_error: { type: String, default: null },
   started_at: { type: Date, required: true },
   completed_at: { type: Date, default: null },
