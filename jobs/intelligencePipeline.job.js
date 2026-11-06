@@ -1,67 +1,16 @@
 const cron = require('node-cron');
-const News = require('../models/news.model');
 const { collectCanonicalArticles } = require('../services/collection');
 const { persistCollectionRun } = require('../services/operations/collectionPersistence');
 const { persistLatestArticles } = require('../services/articles/latestPersistence');
+const { persistNewsClusters } = require('../services/articles/newsPersistence');
 const { clusterNewsArticles } = require('../utils/newsCluster');
-const { getRepresentativeTitle } = require('../utils/representativeTitle');
 const { generateSlug, generateMetaDescription } = require('../utils/helpers');
 const { createLogger } = require('../utils/logger');
-const { bulkWriteInBatches } = require('../utils/bulkWrite');
 const { acquirePipelineLease, releasePipelineLease } = require('../services/operations/schedulerLease');
 
 const logger = createLogger();
 let running = false;
 const CollectionRun = require('../models/collectionRun.model');
-
-function stableClusterId(cluster) {
-  const crypto = require('crypto');
-  const identities = cluster.map((article) => article.article_id).sort().join('|');
-  return crypto.createHash('sha256').update(identities).digest('hex').slice(0, 32);
-}
-
-async function persistClusters(clusters) {
-  if (!clusters.length) return { attempted: 0, batches: 0, upserted: 0, modified: 0 };
-  const operations = clusters.map((cluster) => {
-    const sorted = [...cluster].sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));
-    const articles = sorted.map((article, index) => ({
-      ...article,
-      published_at: article.published_at || new Date(),
-      slug: article.slug || `${generateSlug(article.title) || 'article'}-${article.article_id.slice(0, 10)}`,
-      meta: article.meta || generateMetaDescription(article),
-      article_type: index === 0 ? 'main' : 'sub',
-      isFirstParty: false,
-      isBreaking: false,
-      has_image: Boolean(article.has_image || article.image_url),
-      source_link: article.source_link || article.canonical_url || article.link || '',
-      source_tags: article.source_tags || [],
-    }));
-    const clusterId = stableClusterId(sorted);
-    return {
-      updateOne: {
-        filter: { cluster_id: clusterId },
-        update: { $set: {
-          cluster_id: clusterId,
-          size: articles.length,
-          representative_title: getRepresentativeTitle(sorted) || sorted[0].title,
-          average_relevance: Number((sorted.reduce((sum, item) => sum + (item.relevance_score || 0), 0) / sorted.length).toFixed(3)),
-          articles,
-        } },
-        upsert: true,
-      },
-    };
-  });
-
-  return bulkWriteInBatches(News, operations, {
-    batchSize: 100,
-    maxRetries: 2,
-    retryDelayMs: 500,
-    ordered: false,
-    onRetry: ({ batch, batches, attempt, error }) => logger.warn('Retrying MongoDB news-cluster batch', {
-      batch, batches, retry: attempt, error: error.message,
-    }),
-  });
-}
 
 async function updatePipelineStage(collectionRunId, stage, status = 'running', error = null) {
   if (!collectionRunId) return;
@@ -113,9 +62,16 @@ async function executePipeline() {
     currentStage = 'clustering';
     await updatePipelineStage(collectionRun._id, currentStage);
     logger.info('🧠 Article clustering started', { articles: collection.articles.length });
-    const articles = collection.articles.map((article) => ({
+    const articlesById = new Map();
+    for (const article of collection.articles) {
+      if (!article?.article_id || !article?.title) continue;
+      const id = String(article.article_id);
+      const existing = articlesById.get(id);
+      if (!existing) articlesById.set(id, article);
+    }
+    const articles = [...articlesById.values()].map((article) => ({
       ...article,
-      slug: `${generateSlug(article.title) || 'article'}-${article.article_id.slice(0, 10)}`,
+      slug: `${generateSlug(article.title) || 'article'}-${String(article.article_id).slice(0, 24)}`,
       meta: generateMetaDescription(article),
       relevance_score: article.relevance_score ?? 1,
       isFirstParty: false,
@@ -128,11 +84,17 @@ async function executePipeline() {
 
     currentStage = 'news_persistence';
     await updatePipelineStage(collectionRun._id, currentStage);
-    const clusterPersistence = await persistClusters(clusters);
+    const clusterPersistence = await persistNewsClusters(
+      require('../models/news.model'),
+      clusters,
+      { logger }
+    );
     logger.info('💾 News cluster persistence finished', {
       clusters: clusterPersistence.attempted,
       upserted: clusterPersistence.upserted,
       modified: clusterPersistence.modified,
+      detached: clusterPersistence.detached,
+      removed: clusterPersistence.removed,
       batches: clusterPersistence.batches,
     });
 
@@ -147,7 +109,7 @@ async function executePipeline() {
       sources: collection.sourceCount,
       successfulSources: collection.succeededCount,
       failedSources: collection.failedCount,
-      canonicalArticles: collection.articles.length,
+      canonicalArticles: articles.length,
       latestUpserted: latest.upserted,
       clusters: clusterPersistence.attempted,
     });
@@ -171,4 +133,4 @@ const intelligencePipelineJob = cron.schedule('*/2 * * * *', () => {
   executePipeline().catch((error) => logger.error('Scheduled pipeline execution failed', { error }));
 }, { scheduled: false, timezone: 'UTC' });
 
-module.exports = { intelligencePipelineJob, executePipeline, persistClusters };
+module.exports = { intelligencePipelineJob, executePipeline };
