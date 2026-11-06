@@ -167,7 +167,7 @@ async function executePipeline() {
   }
 }
 
-const intelligencePipelineJob = cron.schedule('*/5 * * * *', () => {
+const intelligencePipelineJob = cron.schedule('*/2 * * * *', () => {
   executePipeline().catch((error) => logger.error('Scheduled pipeline execution failed', { error }));
 }, { scheduled: false, timezone: 'UTC' });
 
