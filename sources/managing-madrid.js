@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchManagingMadridNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'managingmadrid.com', 'Sports');

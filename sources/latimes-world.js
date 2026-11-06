@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchLATimesWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'latimes.com', 'World');

@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFinancialTimesAfricaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'ft.com', 'Africa');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   businessghana_sports: {
     id: 1172,
     name: 'Business Ghana',
+    domain_url: 'businessghana.com',
+    source_category: 'Sports',
     tags: ['news', 'ghana', 'sports', 'football'],
     origin: 'Ghana',
     credibility: 5,
@@ -48,7 +50,7 @@ const fetchBusinessGhanaSportsNews = async () => {
   const websiteName = 'businessghana-sports';
 
   try {
-    const response = await axios.get(newsUrl);
+    const response = await axios.get(newsUrl, { timeout: 10000 });
     const $ = cheerio.load(response.data);
 
     const articles = [];
@@ -95,31 +97,7 @@ const fetchBusinessGhanaSportsNews = async () => {
       }
     });
 
-    const detailedArticles = [];
-    for (const article of articles) {
-      try {
-        const articleResponse = await axios.get(article.link);
-        const article$ = cheerio.load(articleResponse.data);
-
-        let description = '';
-        const contentElement = article$('.article-content');
-        if (contentElement.length) {
-          description = contentElement.text().trim();
-        }
-
-        detailedArticles.push({
-          ...article,
-          description: cleanDescription(description),
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (innerError) {
-        console.error(
-          `Error fetching article details for ${article.link}: ${innerError.message}`
-        );
-        detailedArticles.push(article);
-      }
-    }
+    const detailedArticles = articles;
 
     return {
       source_id: SOURCE_CONFIG.businessghana_sports.id,
@@ -187,3 +165,5 @@ module.exports = {
   fetchBusinessGhanaSportsNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

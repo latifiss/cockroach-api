@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_social: {
     id: 1166,
     name: 'Ghana News Agency - Social',
+    domain_url: 'gna.org.gh',
+    source_category: 'Africa',
     tags: ['social', 'ghana', 'community', 'society', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -155,3 +157,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

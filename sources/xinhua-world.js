@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   xinhua: {
     id: 1038,
     name: 'Xinhua World News',
+    domain_url: 'xinhuanet.com',
+    source_category: 'World',
     tags: ['world', 'news', 'china', 'international'],
     origin: 'China',
     credibility: 3,
@@ -176,3 +178,5 @@ module.exports = {
   cleanCategories,
   SOURCE_CONFIG,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

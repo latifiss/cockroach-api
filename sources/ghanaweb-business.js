@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanaweb: {
     id: 1159,
     name: 'GhanaWeb',
+    domain_url: 'ghanaweb.com',
+    source_category: 'Business & Finance',
     tags: ['news', 'ghana', 'business', 'local', 'finance', 'markets'],
     origin: 'Ghana',
     credibility: 5,
@@ -50,7 +52,7 @@ const fetchGhanaWebBusinessNews = async () => {
 
   try {
     // Fetch the business page
-    const response = await axios.get(businessUrl);
+    const response = await axios.get(businessUrl, { timeout: 10000 });
     const $ = cheerio.load(response.data);
 
     // Extract ALL business news headlines
@@ -91,48 +93,7 @@ const fetchGhanaWebBusinessNews = async () => {
       .get();
 
     // Now scrape details for ALL articles (with rate limiting)
-    const detailedArticles = [];
-    for (const article of articles) {
-      try {
-        const articleResponse = await axios.get(article.link);
-        const article$ = cheerio.load(articleResponse.data);
-
-        // Extract description from article content
-        const description = article$('.article-content-area').text() || '';
-
-        // Extract image from article page
-        let imageUrl = '';
-        const leadImage = article$('.article-image img').first();
-        if (leadImage.length) {
-          imageUrl = leadImage.attr('src') || '';
-          // Ensure full URL if it's relative
-          if (imageUrl && !imageUrl.startsWith('http')) {
-            imageUrl = `${baseUrl}${imageUrl}`;
-          }
-        }
-
-        // Extract proper publication date
-        const publishedAt = parseArticleDate(article$);
-
-        // Update article with details
-        detailedArticles.push({
-          ...article,
-          description: cleanDescription(description),
-          image_url: imageUrl,
-          published_at: publishedAt,
-          has_image: !!imageUrl,
-        });
-
-        // Small delay between requests to be polite
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (innerError) {
-        console.error(
-          `Error fetching article details for ${article.link}: ${innerError.message}`
-        );
-        // Push article without details if there's an error
-        detailedArticles.push(article);
-      }
-    }
+    const detailedArticles = articles;
 
     return {
       source_id: SOURCE_CONFIG.ghanaweb.id,
@@ -200,3 +161,5 @@ module.exports = {
   fetchGhanaWebBusinessNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

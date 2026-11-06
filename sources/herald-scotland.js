@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   heraldscotland: {
     id: 1027,
     name: 'The Herald Scotland',
+    domain_url: 'heraldscotland.com',
+    source_category: 'Local',
     tags: ['scotland', 'news', 'politics', 'business'],
     origin: 'United Kingdom',
     credibility: 2,
@@ -142,3 +144,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

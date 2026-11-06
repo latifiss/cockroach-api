@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_entertainment: {
     id: 1166,
     name: 'Ghana News Agency - Entertainment',
+    domain_url: 'gna.org.gh',
+    source_category: 'Entertainment',
     tags: ['entertainment', 'ghana', 'music', 'local', 'celebrities'],
     origin: 'Ghana',
     credibility: 5,
@@ -159,3 +161,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

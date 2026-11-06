@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   newsghana_sci_tech: {
     id: 1173,
     name: 'News Ghana',
+    domain_url: 'newsghana.com.gh',
+    source_category: 'Technology',
     tags: ['news', 'ghana', 'science', 'innovation'],
     origin: 'Ghana',
     credibility: 5,
@@ -154,3 +156,5 @@ module.exports = {
   fetchNewsGhanaSciTechNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

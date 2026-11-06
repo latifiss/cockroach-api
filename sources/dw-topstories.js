@@ -70,3 +70,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchDWTopStories };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'dw.com', 'World');

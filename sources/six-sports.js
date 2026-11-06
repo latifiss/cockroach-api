@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSixSportsNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'sixsports.in', 'Sports');

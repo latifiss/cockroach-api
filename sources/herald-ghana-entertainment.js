@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   the_herald_ghana_entertainment: {
     id: 1169,
     name: 'The Herald Ghana',
+    domain_url: 'theheraldghana.com',
+    source_category: 'Entertainment',
     tags: ['ghana', 'entertainment', 'music', 'arts', 'culture'],
     origin: 'Ghana',
     credibility: 5,
@@ -107,3 +109,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

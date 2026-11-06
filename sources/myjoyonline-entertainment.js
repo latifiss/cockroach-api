@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   myjoyonline: {
     id: 1161,
     name: 'MyJoyOnline',
+    domain_url: 'myjoyonline.com',
+    source_category: 'Entertainment',
     tags: ['arts', 'culture', 'ghana', 'entertainment', 'music'],
     origin: 'Ghana',
     credibility: 5,
@@ -39,7 +41,7 @@ const fetchMyJoyOnlineArtsCulture = async () => {
   const websiteName = 'myjoyonline-arts-culture';
 
   try {
-    const response = await axios.get(artsUrl);
+    const response = await axios.get(artsUrl, { timeout: 10000 });
     const $ = cheerio.load(response.data);
 
     const articles = [];
@@ -67,47 +69,7 @@ const fetchMyJoyOnlineArtsCulture = async () => {
       }
     });
 
-    const detailedArticles = [];
-    for (const article of articles) {
-      try {
-        const articleResponse = await axios.get(article.link);
-        const article$ = cheerio.load(articleResponse.data);
-
-        const description = article$('#article-text').text() || '';
-        const publishedAt = parseMyJoyOnlineArticleDate(article$);
-
-        let imageUrl = '';
-        const imageContainer = article$(
-          'div.position-relative.share-this-item-show.img-holder'
-        );
-        if (imageContainer.length) {
-          imageUrl = imageContainer.find('img').attr('src') || '';
-        } else {
-          const fallbackImage = article$('.article-thumb img').first();
-          if (fallbackImage.length) {
-            imageUrl = fallbackImage.attr('src') || '';
-          }
-        }
-
-        detailedArticles.push({
-          ...article,
-          description: cleanDescription(description),
-          image_url: imageUrl,
-          published_at: publishedAt,
-          has_image: !!imageUrl,
-          article_id: generateArticleId(
-            article.title,
-            article.link,
-            websiteName,
-            publishedAt
-          ),
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (error) {
-        detailedArticles.push(article);
-      }
-    }
+    const detailedArticles = articles;
 
     return {
       ...SOURCE_CONFIG.myjoyonline,
@@ -135,3 +97,5 @@ if (require.main === module) {
 module.exports = {
   fetchMyJoyOnlineArtsCulture,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -1,48 +1,44 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { createLogger } = require('../utils/logger');
 
-let isDBConnected = false;
-const connectionCallbacks = [];
-
-const connectDB = async () => {
-  try {
-    console.log('🔌 Attempting MongoDB connection...');
-    await mongoose.connect(process.env.MONGODB_URI, {
-      dbName: 'api',
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      retryWrites: true,
-      retryReads: true,
-    });
-
-    isDBConnected = true;
-    console.log('✅ MongoDB connected successfully!');
-
-    // Execute all queued callbacks
-    connectionCallbacks.forEach((cb) => cb());
-    connectionCallbacks.length = 0;
-  } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-    console.log('🔄 Retrying in 5 seconds...');
-    setTimeout(connectDB, 5000);
-  }
-};
+const logger = createLogger();
+let connectionPromise = null;
 
 mongoose.connection.on('disconnected', () => {
-  isDBConnected = false;
-  console.log('💔 Disconnected from MongoDB');
+  logger.warn('MongoDB connection lost');
 });
 
-// Add this new function to queue callbacks
-const onConnected = (callback) => {
-  if (isDBConnected) {
-    callback();
-  } else {
-    connectionCallbacks.push(callback);
-  }
-};
+mongoose.connection.on('connected', () => {
+  logger.info('MongoDB connected');
+});
 
-module.exports = { connectDB, onConnected, mongoose };
+async function connectDB(options = {}) {
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (connectionPromise) return connectionPromise;
+
+  const uri = options.uri || process.env.MONGODB_URI;
+  if (!uri) throw new Error('MONGODB_URI is required');
+
+  connectionPromise = mongoose.connect(uri, {
+    dbName: options.dbName || process.env.MONGODB_DB_NAME || 'api',
+    serverSelectionTimeoutMS: options.serverSelectionTimeoutMS || 10000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: options.maxPoolSize || 10,
+    retryWrites: true,
+    retryReads: true,
+  }).then(() => mongoose.connection).catch((error) => {
+    logger.error('MongoDB connection failed', { error });
+    throw error;
+  }).finally(() => {
+    connectionPromise = null;
+  });
+
+  return connectionPromise;
+}
+
+function isDBConnected() {
+  return mongoose.connection.readyState === 1;
+}
+
+module.exports = { connectDB, isDBConnected, mongoose };

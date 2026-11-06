@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   ghanacelebrities_entertainment: {
     id: 1165,
     name: 'Ghana Celebrities',
+    domain_url: 'ghanacelebrities.com',
+    source_category: 'Entertainment',
     tags: [
       'entertainment',
       'ghana',
@@ -191,3 +193,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

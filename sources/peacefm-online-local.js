@@ -7,6 +7,8 @@ const SOURCE_CONFIG = {
   peacefm_local: {
     id: 1177,
     name: 'Peace FM Online - Local News',
+    domain_url: 'peacefmonline.com',
+    source_category: 'Local',
     tags: ['news', 'ghana', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -198,3 +200,5 @@ module.exports = {
   fetchPeaceFMLocalNews,
   testSelectors,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

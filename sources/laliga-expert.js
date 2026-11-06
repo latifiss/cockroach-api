@@ -107,3 +107,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchLaLigaExpertNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'laligaexpert.com', 'Sports');

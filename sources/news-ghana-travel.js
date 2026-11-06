@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   newsghana_travel: {
     id: 1173,
     name: 'News Ghana',
+    domain_url: 'newsghana.com.gh',
+    source_category: 'Lifestyle',
     tags: ['news', 'ghana', 'travel', 'tourism', 'destinations'],
     origin: 'Ghana',
     credibility: 5,
@@ -96,13 +98,6 @@ const fetchNewsGhanaTravelNews = async () => {
       articles: articles,
     };
   } catch (error) {
-    console.error(
-      `Error fetching NewsGhana travel & tourism news: ${error.message}`,
-      {
-        url: newsUrl,
-        stack: error.stack,
-      }
-    );
     return {
       ...SOURCE_CONFIG.newsghana_travel,
       source_link: newsUrl,
@@ -153,3 +148,5 @@ module.exports = {
   fetchNewsGhanaTravelNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -106,3 +106,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCultOfCalcioNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'cultofcalcio.com', 'Sports');

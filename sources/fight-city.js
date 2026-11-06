@@ -135,3 +135,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTheFightCity };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

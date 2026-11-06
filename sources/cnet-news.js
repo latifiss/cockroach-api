@@ -73,3 +73,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCNETNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'cnet.com', 'Technology');

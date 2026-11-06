@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   channel4: {
     id: 1025,
     name: 'Channel 4 News',
+    domain_url: 'channel4.com',
+    source_category: 'News',
     tags: ['uk', 'news', 'politics', 'current-affairs'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -141,3 +143,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

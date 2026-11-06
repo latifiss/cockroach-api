@@ -123,3 +123,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRTNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'rt.com', 'World');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   adomonline: {
     id: 1171,
     name: 'Adom Online',
+    domain_url: 'adomonline.com',
+    source_category: 'Local',
     tags: ['news', 'ghana', 'crime', 'education', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -224,3 +226,5 @@ module.exports = {
   fetchAdomonlineNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   african_entertainment: {
     id: 1138,
     name: 'African Entertainment',
+    domain_url: 'africanentertainment.com',
+    source_category: 'Entertainment',
     tags: [
       'entertainment',
       'africa',
@@ -150,3 +152,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

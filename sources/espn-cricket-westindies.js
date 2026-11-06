@@ -160,3 +160,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchESPNCricketWestIndies };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

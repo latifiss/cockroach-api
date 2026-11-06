@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchArseblogNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'arseblog.com', 'Sports');

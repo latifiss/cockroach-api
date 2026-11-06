@@ -119,3 +119,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCBSSportsNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'cbssports.com', 'Sports');

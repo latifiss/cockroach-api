@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_economy: {
     id: 1166,
     name: 'Ghana News Agency - Economy',
+    domain_url: 'gna.org.gh',
+    source_category: 'Business & Finance',
     tags: ['economy', 'ghana', 'business', 'finance', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -157,3 +159,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -110,3 +110,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTechCrunchNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'techcrunch.com', 'Technology');

@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   dailymail: {
     id: 1022,
     name: 'Daily Mail',
+    domain_url: 'dailymail.co.uk',
+    source_category: 'Science & Health',
     tags: ['science', 'technology', 'innovation', 'research'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -125,3 +127,5 @@ module.exports = {
   cleanDescription,
   getImageUrl,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

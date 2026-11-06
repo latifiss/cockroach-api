@@ -156,3 +156,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchYahooCollegeFootballNews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

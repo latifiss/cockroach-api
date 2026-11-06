@@ -147,3 +147,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSportstarGolf };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

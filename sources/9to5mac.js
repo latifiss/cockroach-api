@@ -103,3 +103,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetch9to5MacNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, '9to5mac.com', 'Technology');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   cgtn: {
     id: 1035,
     name: 'CGTN',
+    domain_url: 'cgtn.com',
+    source_category: 'World',
     tags: ['world', 'news', 'international', 'current-affairs'],
     origin: 'China',
     credibility: 4,
@@ -156,3 +158,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

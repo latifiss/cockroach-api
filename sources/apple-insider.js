@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchAppleInsiderNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'appleinsider.com', 'Technology');

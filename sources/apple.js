@@ -101,3 +101,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchAppleNewsroom };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'apple.com', 'Technology');

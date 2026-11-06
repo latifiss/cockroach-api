@@ -108,3 +108,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGhanaSoccernetNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'ghanasoccernet.com', 'Sports');

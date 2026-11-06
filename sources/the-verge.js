@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTheVergeNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'theverge.com', 'Technology');

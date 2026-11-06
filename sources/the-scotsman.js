@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   scotsman: {
     id: 1023,
     name: 'The Scotsman',
+    domain_url: 'scotsman.com',
+    source_category: 'Local',
     tags: ['scotland', 'news', 'sport', 'politics'],
     origin: 'United Kingdom',
     credibility: 3,
@@ -130,3 +132,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

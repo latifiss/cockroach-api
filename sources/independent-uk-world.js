@@ -133,3 +133,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIndependentWorldNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'independent.co.uk', 'World');

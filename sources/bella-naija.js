@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   bellanaija: {
     id: 1143,
     name: 'BellaNaija',
+    domain_url: 'bellanaija.com',
+    source_category: 'Entertainment',
     tags: [
       'news',
       'nigeria',
@@ -147,3 +149,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

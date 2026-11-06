@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRCCeltaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'rccelta.es', 'Sports');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   daily_guide_political: {
     id: 1175,
     name: 'Daily Guide Network',
+    domain_url: 'dailyguidenetwork.com',
+    source_category: 'Politics',
     tags: [
       'news',
       'ghana',
@@ -215,3 +217,5 @@ module.exports = {
   fetchDailyGuidePoliticalNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

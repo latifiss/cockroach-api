@@ -67,3 +67,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchEconomistFinanceNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'economist.com', 'Business & Finance');

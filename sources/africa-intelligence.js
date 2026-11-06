@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   africa_intelligence: {
     id: 1140,
     name: 'Africa Intelligence',
+    domain_url: 'africaintelligence.com',
+    source_category: 'Africa',
     tags: ['news', 'africa', 'international'],
     origin: 'Africa',
     credibility: 5,
@@ -143,3 +145,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

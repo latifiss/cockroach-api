@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   dailyrecord: {
     id: 1024,
     name: 'Daily Record',
+    domain_url: 'dailyrecord.co.uk',
+    source_category: 'Local',
     tags: ['scotland', 'news', 'international'],
     origin: 'United Kingdom',
     credibility: 2,
@@ -137,3 +139,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

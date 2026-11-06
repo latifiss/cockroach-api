@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFootballEspanaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'football-espana.net', 'Sports');

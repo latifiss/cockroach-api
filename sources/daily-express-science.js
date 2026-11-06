@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   express: {
     id: 1030,
     name: 'Daily Express',
+    domain_url: 'express.co.uk',
+    source_category: 'Science & Health',
     tags: ['science', 'technology', 'research', 'discovery'],
     origin: 'United Kingdom',
     credibility: 4,
@@ -140,3 +142,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

@@ -93,3 +93,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchStarsAndStripesFCNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'starsandstripesfc.com', 'Sports');

@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBundesligaFanNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'bundesligafan.com', 'Sports');

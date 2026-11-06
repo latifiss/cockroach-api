@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   constructafrica: {
     id: 1154,
     name: 'ConstructAfrica',
+    domain_url: 'constructafrica.com',
+    source_category: 'Africa',
     tags: [
       'construction',
       'africa',
@@ -149,3 +151,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

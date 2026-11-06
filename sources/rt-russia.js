@@ -126,3 +126,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRTRussia };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'rt.com', 'World');

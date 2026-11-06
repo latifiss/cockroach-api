@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   yen_entertainment: {
     id: 1174,
     name: 'Yen',
+    domain_url: 'yen.com.gh',
+    source_category: 'Entertainment',
     tags: ['news', 'ghana', 'entertainment', 'celebrities', 'music', 'movies'],
     origin: 'Ghana',
     credibility: 5,
@@ -186,13 +188,6 @@ const fetchYenEntertainmentNews = async () => {
       articles: articles,
     };
   } catch (error) {
-    console.error(
-      `Error fetching Yen.com.gh entertainment news: ${error.message}`,
-      {
-        url: newsUrl,
-        stack: error.stack,
-      }
-    );
     return {
       ...SOURCE_CONFIG.yen_entertainment,
       source_link: newsUrl,
@@ -243,3 +238,5 @@ module.exports = {
   fetchYenEntertainmentNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

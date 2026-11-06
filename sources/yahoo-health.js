@@ -77,3 +77,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchYahooHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'yahoo.com', 'Science & Health');

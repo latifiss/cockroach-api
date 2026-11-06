@@ -109,3 +109,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGuardianBarcelonaNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'theguardian.com', 'Sports');

@@ -68,3 +68,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNewYorkTimesBusinessNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'nytimes.com', 'Business & Finance');

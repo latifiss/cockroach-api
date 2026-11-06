@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   tori_ng: {
     id: 1123,
     name: 'Tori News',
+    domain_url: 'tori.ng',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -150,3 +152,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

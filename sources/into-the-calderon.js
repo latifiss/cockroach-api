@@ -107,3 +107,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIntoTheCalderonNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'intothecalderon.com', 'Sports');

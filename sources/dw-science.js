@@ -82,3 +82,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchDWScience };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'dw.com', 'Science & Health');

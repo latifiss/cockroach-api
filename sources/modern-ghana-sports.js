@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   modernghana_sports: {
     id: 1168,
     name: 'ModernGhana Sports',
+    domain_url: 'modernghana.com',
+    source_category: 'Sports',
     tags: ['ghana', 'sports', 'football', 'basketball', 'tennis'],
     origin: 'Ghana',
     credibility: 5,
@@ -182,3 +184,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

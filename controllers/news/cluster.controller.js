@@ -1,67 +1,38 @@
 const crypto = require('crypto');
-const newsSources = require('../../sourcesIndex');
-const { clusterNewsArticles } = require('../../utils/newsCluster');
-const { deduplicateArticles } = require('../../utils/deduplicate');
+const News = require('../../models/news.model');
 
-const generateClusterId = (articles) => {
-  const sortedIds = articles
-    .map((a) => a.id)
-    .sort()
-    .join('|');
+function generateClusterId(articles) {
+  const sortedIds = articles.map((article) => article.article_id || article.link || article.title).sort().join('|');
+  return crypto.createHash('sha256').update(sortedIds).digest('hex').slice(0, 32);
+}
 
-  return crypto
-    .createHash('sha256')
-    .update(sortedIds)
-    .digest('hex')
-    .substring(0, 100);
-};
-
-const getclusterLatestNews = async (req, res) => {
+async function getclusterLatestNews(req, res) {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
+    const [clusters, total, articleCount] = await Promise.all([
+      News.find().sort({ average_relevance: -1, updatedAt: -1 }).skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
+      News.countDocuments(),
+      News.aggregate([{ $group: { _id: null, total: { $sum: '$size' } } }]),
+    ]);
 
-    const allNews = await Promise.all(newsSources.map((fetch) => fetch()));
-
-    let allArticles = [];
-    allNews.forEach((source) => {
-      if (source.articles?.length) {
-        const enriched = source.articles.map((a) => ({
-          ...a,
-          source_name: source.source_name,
-          source_origin: source.source_origin,
-          source_tags: source.source_tags,
-        }));
-        allArticles.push(...enriched);
-      }
-    });
-
-    const clusters = await clusterNewsArticles(allArticles, 0.75);
-
-    const startIndex = (pageNum - 1) * limitNum;
-    const endIndex = startIndex + limitNum;
-    const paginatedClusters = clusters.slice(startIndex, endIndex);
-
-    res.json({
-      clustered_count: clusters.length,
+    return res.json({
+      clustered_count: total,
       page: pageNum,
       per_page: limitNum,
-      total_articles: allArticles.length,
-      total_clusters: clusters.length,
-      clusters: paginatedClusters.map((group) => ({
-        cluster_id: generateClusterId(group),
-        size: group.length,
-        articles: group,
+      total_articles: articleCount[0]?.total || 0,
+      total_clusters: total,
+      clusters: clusters.map((cluster) => ({
+        cluster_id: cluster.cluster_id || generateClusterId(cluster.articles || []),
+        size: cluster.size || cluster.articles?.length || 0,
+        representative_title: cluster.representative_title || '',
+        average_relevance: cluster.average_relevance || 0,
+        articles: cluster.articles || [],
       })),
     });
   } catch (error) {
-    console.error('Error in clustering news:', error);
-    res.status(500).json({
-      error: 'Failed to cluster news',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Failed to retrieve clustered news' });
   }
-};
+}
 
 module.exports = { getclusterLatestNews };

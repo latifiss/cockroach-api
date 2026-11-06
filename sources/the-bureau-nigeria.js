@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   the_bureau: {
     id: 1121,
     name: 'The Bureau Nigeria',
+    domain_url: 'thebureau.com.ng',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -147,3 +149,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

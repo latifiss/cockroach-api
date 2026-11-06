@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   african_mirror: {
     id: 1150,
     name: 'The African Mirror',
+    domain_url: 'theafricanmirror.africa',
+    source_category: 'Africa',
     tags: [
       'news',
       'africa',
@@ -150,3 +152,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

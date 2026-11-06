@@ -136,3 +136,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBleacherReportNews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

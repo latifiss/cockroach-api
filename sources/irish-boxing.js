@@ -136,3 +136,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIrishBoxing };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

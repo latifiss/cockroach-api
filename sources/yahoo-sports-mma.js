@@ -153,3 +153,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchYahooMMANews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

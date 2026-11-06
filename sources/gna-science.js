@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_science: {
     id: 1166,
     name: 'Ghana News Agency - Science',
+    domain_url: 'gna.org.gh',
+    source_category: 'Science & Health',
     tags: ['science', 'research', 'local', 'ghana'],
     origin: 'Ghana',
     credibility: 5,
@@ -155,3 +157,5 @@ module.exports = {
   cleanDescription,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

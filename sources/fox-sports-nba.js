@@ -139,3 +139,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFoxSportsNBANews };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

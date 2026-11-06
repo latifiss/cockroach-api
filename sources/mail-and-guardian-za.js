@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   mail_guardian: {
     id: 1130,
     name: 'Mail & Guardian',
+    domain_url: 'mg.co.za',
+    source_category: 'Africa',
     tags: ['news', 'south-africa', 'investigative', 'africa'],
     origin: 'South Africa',
     credibility: 4,
@@ -143,3 +145,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

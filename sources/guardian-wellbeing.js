@@ -78,3 +78,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGuardianWellbeingNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'theguardian.com', 'Science & Health');

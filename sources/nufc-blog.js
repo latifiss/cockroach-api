@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNUFCBlogNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'nufcblog.co.uk', 'Sports');

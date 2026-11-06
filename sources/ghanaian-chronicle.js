@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   ghanaianchronicle: {
     id: 1156,
     name: 'Ghanaian Chronicle',
+    domain_url: 'thechronicle.com.gh',
+    source_category: 'Africa',
     tags: [
       'news',
       'ghana',
@@ -177,3 +179,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

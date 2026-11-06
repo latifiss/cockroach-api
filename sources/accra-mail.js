@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   accramail: {
     id: 1157,
     name: 'Accra Mail',
+    domain_url: 'accramail.com',
+    source_category: 'Local',
     tags: [
       'news',
       'ghana',
@@ -172,3 +174,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

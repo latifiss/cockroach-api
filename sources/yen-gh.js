@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   yen_ghana: {
     id: 1174,
     name: 'Yen',
+    domain_url: 'yen.com.gh',
+    source_category: 'Africa',
     tags: ['news', 'ghana', 'local', 'crime', 'education'],
     origin: 'Ghana',
     credibility: 5,
@@ -240,3 +242,5 @@ module.exports = {
   fetchYenGhanaNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

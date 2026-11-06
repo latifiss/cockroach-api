@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFrenchFootballWeeklyNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'frenchfootballweekly.com', 'Sports');

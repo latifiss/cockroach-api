@@ -86,3 +86,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchFrance24Earth };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'france24.com', 'Science & Health');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   yawanews_news: {
     id: 1164,
     name: 'Yawa News',
+    domain_url: 'yawanews.com',
+    source_category: 'Africa',
     tags: ['news', 'ghana', 'politics', 'current affairs', 'local'],
     origin: 'Ghana',
     credibility: 4.5,
@@ -226,3 +228,5 @@ module.exports = {
   parseYawaDate,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

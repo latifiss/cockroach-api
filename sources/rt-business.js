@@ -114,3 +114,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchRTBusiness };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'rt.com', 'Business & Finance');

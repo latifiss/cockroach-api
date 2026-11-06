@@ -105,3 +105,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchSBISoccerNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'sbisoccer.com', 'Sports');

@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   scmp: {
     id: 1037,
     name: 'South China Morning Post',
+    domain_url: 'scmp.com',
+    source_category: 'World',
     tags: ['hongkong', 'china', 'asia', 'news', 'international'],
     origin: 'Hong Kong',
     credibility: 2,
@@ -157,3 +159,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

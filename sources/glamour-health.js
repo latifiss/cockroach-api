@@ -77,3 +77,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchGlamourHealthNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'glamour.com', 'Science & Health');

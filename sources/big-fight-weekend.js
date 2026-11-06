@@ -133,3 +133,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchBigFightWeekend };
+
+require('../utils/sourceConfig').attachSourceCategory(module.exports, 'Sports');

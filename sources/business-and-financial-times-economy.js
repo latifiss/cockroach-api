@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   bft_economy: {
     id: 1176,
     name: 'The Business & Financial Times',
+    domain_url: 'thebftonline.com',
+    source_category: 'Business & Finance',
     tags: [
       'news',
       'ghana',
@@ -270,3 +272,5 @@ module.exports = {
   fetchBFTEconomyNews,
   cleanDescription,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

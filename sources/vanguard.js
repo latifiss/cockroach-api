@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   vanguard: {
     id: 1114,
     name: 'Vanguard News',
+    domain_url: 'vanguardngr.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -145,3 +147,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

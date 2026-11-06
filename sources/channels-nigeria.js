@@ -5,6 +5,8 @@ const SOURCE_CONFIG = {
   channels_tv: {
     id: 1119,
     name: 'Channels TV',
+    domain_url: 'channelstv.com',
+    source_category: 'Africa',
     tags: [
       'news',
       'nigeria',
@@ -146,3 +148,5 @@ module.exports = {
   getImageUrl,
   cleanCategories,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

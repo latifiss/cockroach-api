@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   gna_politics: {
     id: 1166,
     name: 'Ghana News Agency - Politics',
+    domain_url: 'gna.org.gh',
+    source_category: 'Politics',
     tags: ['politics', 'ghana', 'government', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -156,3 +158,5 @@ if (require.main === module) {
 module.exports = {
   fetchGNAPoliticsArticles,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

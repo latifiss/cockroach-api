@@ -6,6 +6,8 @@ const SOURCE_CONFIG = {
   graphicgh_sports: {
     id: 1163,
     name: 'Graphic',
+    domain_url: 'graphic.com.gh',
+    source_category: 'Sports',
     tags: ['sports', 'ghana', 'football', 'basketball', 'boxing', 'local'],
     origin: 'Ghana',
     credibility: 5,
@@ -199,3 +201,5 @@ module.exports = {
   parseGraphicDate,
   generateArticleId,
 };
+
+require('../utils/sourceConfig').attachSourceConfigName(module.exports, SOURCE_CONFIG);

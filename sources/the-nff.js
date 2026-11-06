@@ -106,3 +106,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchNFFNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'thenff.com', 'Sports');

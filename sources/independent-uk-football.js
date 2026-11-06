@@ -111,3 +111,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchIndependentFootballNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'independent.co.uk', 'Sports');

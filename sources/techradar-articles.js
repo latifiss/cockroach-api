@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchTechRadar };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'techradar.com', 'Technology');

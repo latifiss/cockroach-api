@@ -87,3 +87,5 @@ if (require.main === module) {
 }
 
 module.exports = { fetchAndroidAuthorityNews };
+
+require('../utils/sourceConfig').attachSourceDomainUrl(module.exports, 'androidauthority.com', 'Technology');
