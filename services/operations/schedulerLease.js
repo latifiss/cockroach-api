@@ -4,7 +4,7 @@ const { createLogger } = require('../../utils/logger');
 const logger = createLogger();
 
 const LEASE_ID = 'news-intelligence-pipeline';
-const LEASE_DURATION_MS = 30 * 60 * 1000;
+const LEASE_DURATION_MS = 5 * 60 * 1000;
 const ownerId = `${process.pid}:${randomUUID()}`;
 
 async function acquirePipelineLease() {
@@ -36,7 +36,7 @@ async function acquirePipelineLease() {
   } catch (error) {
     if (error.code === 11000) {
       const currentLease = await SchedulerLease.findById(LEASE_ID).select('owner lease_until acquired_at').lean();
-      logger.warn('Pipeline scheduler lease is currently held', {
+      logger.warn('🔒 Pipeline lease is held; waiting for expiry', {
         leaseUntil: currentLease?.lease_until,
         acquiredAt: currentLease?.acquired_at,
         ownerIsCurrentProcess: currentLease?.owner === ownerId,
