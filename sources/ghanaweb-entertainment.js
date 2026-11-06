@@ -58,7 +58,7 @@ const fetchGhanaWebEntertainmentNews = async () => {
   const websiteName = 'ghanaweb-entertainment';
 
   try {
-    const response = await axios.get(entertainmentUrl);
+    const response = await axios.get(entertainmentUrl, { timeout: 10000 });
     const $ = cheerio.load(response.data);
 
     const headlinesList = $('ul#load_headlines.entertainment');
@@ -96,41 +96,7 @@ const fetchGhanaWebEntertainmentNews = async () => {
       })
       .get();
 
-    const detailedArticles = [];
-    for (const article of articles) {
-      try {
-        const articleResponse = await axios.get(article.link);
-        const article$ = cheerio.load(articleResponse.data);
-
-        const description = article$('.article-content-area').text() || '';
-
-        let imageUrl = '';
-        const leadImage = article$('.article-image img').first();
-        if (leadImage.length) {
-          imageUrl = leadImage.attr('src') || '';
-          if (imageUrl && !imageUrl.startsWith('http')) {
-            imageUrl = `${baseUrl}${imageUrl}`;
-          }
-        }
-
-        const publishedAt = parseArticleDate(article$);
-
-        detailedArticles.push({
-          ...article,
-          description: cleanDescription(description),
-          image_url: imageUrl,
-          published_at: publishedAt,
-          has_image: !!imageUrl,
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (innerError) {
-        console.error(
-          `Error fetching article details for ${article.link}: ${innerError.message}`
-        );
-        detailedArticles.push(article);
-      }
-    }
+    const detailedArticles = articles;
 
     return {
       source_id: SOURCE_CONFIG.ghanaweb.id,
