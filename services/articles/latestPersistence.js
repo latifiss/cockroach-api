@@ -1,5 +1,9 @@
 const Latest = require('../../models/latest.model');
 const { generateSlug, generateMetaDescription, generateMetaTitle } = require('../../utils/helpers');
+const { bulkWriteInBatches } = require('../../utils/bulkWrite');
+const { createLogger } = require('../../utils/logger');
+
+const logger = createLogger();
 
 function toLatestDocument(article) {
   const title = article.title.trim();
@@ -39,28 +43,34 @@ function toLatestDocument(article) {
   };
 }
 
-async function persistLatestArticles(articles) {
+async function persistLatestArticles(articles, options = {}) {
   if (!Array.isArray(articles)) throw new TypeError('articles must be an array');
-  if (articles.length === 0) return { attempted: 0, upserted: 0, modified: 0 };
+  if (articles.length === 0) return { attempted: 0, batches: 0, upserted: 0, modified: 0 };
   const documents = articles.filter((article) => article?.article_id && article?.title).map(toLatestDocument);
-  if (!documents.length) return { attempted: 0, upserted: 0, modified: 0 };
+  if (!documents.length) return { attempted: 0, batches: 0, upserted: 0, modified: 0 };
 
   const operations = documents.map((document) => ({
     updateOne: {
       filter: { article_id: document.article_id },
-      update: {
-        $set: document,
-        $setOnInsert: { first_seen_at: new Date() },
-      },
+      update: { $set: document, $setOnInsert: { first_seen_at: new Date() } },
       upsert: true,
     },
   }));
-  const result = await Latest.bulkWrite(operations, { ordered: false });
-  return {
-    attempted: documents.length,
-    upserted: result.upsertedCount || 0,
-    modified: result.modifiedCount || 0,
-  };
+
+  logger.info('Saving latest articles', { count: operations.length, batchSize: options.batchSize || 500 });
+  const result = await bulkWriteInBatches(Latest, operations, {
+    batchSize: options.batchSize ?? 500,
+    maxRetries: options.maxRetries ?? 2,
+    retryDelayMs: options.retryDelayMs ?? 500,
+    ordered: false,
+    onRetry: ({ batch, batches, attempt, error }) => logger.warn('Retrying MongoDB article batch', {
+      batch, batches, retry: attempt, error: error.message,
+    }),
+  });
+  logger.info('Latest article persistence completed', {
+    attempted: result.attempted, batches: result.batches, upserted: result.upserted, modified: result.modified,
+  });
+  return result;
 }
 
 module.exports = { persistLatestArticles, toLatestDocument };
