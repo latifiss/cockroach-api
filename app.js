@@ -23,11 +23,19 @@ if (cluster.isPrimary) {
   const workerCount = Math.min(os.cpus().length, 4);
   let shuttingDown = false;
 
-  for (let index = 0; index < workerCount; index += 1) cluster.fork();
+  const schedulerWorkers = new Set();
+  function forkWorker(isScheduler = false) {
+    const worker = cluster.fork({ SCHEDULER_WORKER: isScheduler ? 'true' : 'false' });
+    if (isScheduler) schedulerWorkers.add(worker.id);
+    return worker;
+  }
+
+  for (let index = 0; index < workerCount; index += 1) forkWorker(index === 0);
 
   cluster.on('exit', (worker, code, signal) => {
+    const wasScheduler = schedulerWorkers.delete(worker.id);
     logger.error('API worker exited', { workerId: worker.id, pid: worker.process.pid, code, signal });
-    if (!shuttingDown) cluster.fork();
+    if (!shuttingDown) forkWorker(wasScheduler);
   });
 
   const shutdown = () => {
@@ -87,9 +95,11 @@ if (cluster.isPrimary) {
     logger.info('API worker listening', { pid: process.pid, port: config.port, workerId: cluster.worker.id });
     try {
       await connectDB();
-      await updateNewsCache();
-      intelligencePipelineJob.start();
-      logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id });
+      if (process.env.SCHEDULER_WORKER === 'true') {
+        intelligencePipelineJob.start();
+        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 2 });
+        updateNewsCache().catch((error) => logger.error('Initial news cache refresh failed', { error }));
+      }
     } catch (error) {
       logger.error('Worker initialization failed', { error });
       server.close(() => process.exit(1));
