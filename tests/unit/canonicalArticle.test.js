@@ -62,3 +62,14 @@ test('preserves publisher metadata without mixing publisher and article categori
   assert.deepEqual(article.source_tags, ['ghana', 'politics']);
   assert.deepEqual(article.categories, ['Politics']);
 });
+
+test('generates stable source-aware slugs when a publisher slug is missing', () => {
+  const first = normalizeArticle({ title: 'A major story', slug: null, link: 'https://example.com/story' }, { source_id: 'publisher-a', source_name: 'Example News' });
+  const repeated = normalizeArticle({ title: 'A major story', slug: '', link: 'https://example.com/story?utm_source=feed' }, { source_id: 'publisher-a', source_name: 'Example News' });
+  const otherPublisher = normalizeArticle({ title: 'A major story', slug: null, link: 'https://other.example/story' }, { source_id: 'publisher-b', source_name: 'Other News' });
+
+  assert.match(first.slug, /^a-major-story-example-news-/);
+  assert.equal(first.slug, repeated.slug);
+  assert.notEqual(first.article_id, otherPublisher.article_id);
+  assert.notEqual(first.slug, otherPublisher.slug);
+});
