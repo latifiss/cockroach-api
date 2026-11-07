@@ -238,3 +238,91 @@ test('rejects a stored slug owned by a different article before writing', async 
   );
   assert.equal(writeCalls, 0);
 });
+
+
+test('persists a cluster batch atomically under the owned scheduler lease', async () => {
+  const events = [];
+  const session = {
+    async withTransaction(callback) {
+      events.push('transaction:start');
+      await callback();
+      events.push('transaction:commit');
+    },
+    async endSession() {
+      events.push('session:end');
+    },
+  };
+  const leaseModel = {
+    async updateOne(filter, update, options) {
+      assert.equal(filter.owner, 'test-owner');
+      assert.ok(options.session);
+      assert.equal(update.$inc.lease_revision, 1);
+      events.push('lease:verified');
+      return { matchedCount: 1 };
+    },
+  };
+  const writes = [];
+  const model = {
+    db: { async startSession() { return session; } },
+    find() {
+      return {
+        session() { return this; },
+        async lean() { return []; },
+      };
+    },
+    async bulkWrite(operations, options) {
+      assert.equal(options.session, session);
+      writes.push(operations);
+      events.push('bulkWrite');
+      return { upsertedCount: 1, modifiedCount: 0, matchedCount: 0 };
+    },
+    async deleteMany() {
+      throw new Error('No deletion should be needed');
+    },
+  };
+
+  const result = await persistNewsClusters(model, [[article('article-transaction')]], {
+    leaseOwner: 'test-owner',
+    leaseModel,
+    transactionBatchSize: 1,
+  });
+
+  assert.equal(result.inserted, 1);
+  assert.equal(result.batches, 1);
+  assert.equal(writes.length, 1);
+  assert.deepEqual(events, [
+    'transaction:start',
+    'lease:verified',
+    'bulkWrite',
+    'transaction:commit',
+    'session:end',
+  ]);
+});
+
+test('aborts cluster persistence when the scheduler lease is no longer owned', async () => {
+  let writes = 0;
+  let ended = false;
+  const session = {
+    async withTransaction(callback) { await callback(); },
+    async endSession() { ended = true; },
+  };
+  const model = {
+    db: { async startSession() { return session; } },
+    find() {
+      throw new Error('News lookup must not run without the lease');
+    },
+    async bulkWrite() {
+      writes += 1;
+    },
+  };
+
+  await assert.rejects(
+    persistNewsClusters(model, [[article('article-lease-lost')]], {
+      leaseOwner: 'stale-owner',
+      leaseModel: { async updateOne() { return { matchedCount: 0 }; } },
+    }),
+    (error) => error.code === 'PIPELINE_LEASE_LOST'
+  );
+  assert.equal(writes, 0);
+  assert.equal(ended, true);
+});
