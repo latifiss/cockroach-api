@@ -8,10 +8,10 @@ const LIMIT = 20;
 const MAX_TIME_MS = 120000;
 
 async function runCheck(label, operation) {
-  process.stdout.write(`🔎 ${label}...\\n`);
+  process.stdout.write(`🔎 ${label}...\n`);
   const startedAt = Date.now();
   const result = await operation();
-  process.stdout.write(`✅ ${label} completed in ${((Date.now() - startedAt) / 1000).toFixed(1)}s\\n`);
+  process.stdout.write(`✅ ${label} completed in ${((Date.now() - startedAt) / 1000).toFixed(1)}s\n`);
   return result;
 }
 
@@ -87,27 +87,26 @@ async function collectIntegrityReport() {
     { $limit: LIMIT },
   ], { allowDiskUse: true, maxTimeMS: MAX_TIME_MS }).toArray());
 
-  const newsArticlesMissingFromLatest = await runCheck('Check news articles against latest', () => news.aggregate([
-    { $unwind: '$articles' },
-    {
-      $lookup: {
-        from: Latest.collection.name,
-        localField: 'articles.article_id',
-        foreignField: 'article_id',
-        as: 'latestMatch',
-      },
-    },
-    { $match: { latestMatch: { $size: 0 } } },
-    {
-      $project: {
-        _id: 0,
-        cluster_id: 1,
-        article_id: '$articles.article_id',
-        title: '$articles.title',
-      },
-    },
-    { $limit: LIMIT },
-  ], { allowDiskUse: true, maxTimeMS: MAX_TIME_MS }).toArray());
+  const newsArticleIds = await runCheck('Collect unique news article IDs', async () => {
+    const rows = await news.aggregate([
+      { $unwind: '$articles' },
+      { $match: { 'articles.article_id': { $nin: [null, ''] } } },
+      { $group: { _id: '$articles.article_id' } },
+    ], { allowDiskUse: true, maxTimeMS: MAX_TIME_MS }).toArray();
+    return rows.map((row) => row._id);
+  });
+
+  const latestArticleIds = await runCheck('Compare news IDs with latest records', async () => {
+    if (!newsArticleIds.length) return [];
+    const found = await latest.distinct('article_id', {
+      article_id: { $in: newsArticleIds },
+    }, { maxTimeMS: MAX_TIME_MS });
+    const foundSet = new Set(found);
+    return newsArticleIds
+      .filter((articleId) => !foundSet.has(articleId))
+      .slice(0, LIMIT)
+      .map((article_id) => ({ article_id }));
+  });
 
   const emptyClusters = await runCheck('Check empty clusters', () => news.countDocuments(
     { articles: { $size: 0 } },
@@ -132,7 +131,7 @@ async function collectIntegrityReport() {
       duplicateArticleIdsInLatest: duplicateLatestArticleIds,
       articlesAppearingInMultipleNewsClusters: duplicateClusterMembership,
       slugsAssignedToMultipleArticleIds: duplicateNewsSlugOwnership,
-      newsArticlesWithoutMatchingLatestRecord: newsArticlesMissingFromLatest,
+      newsArticlesWithoutMatchingLatestRecord: latestArticleIds,
     },
     clusterIntegrity: {
       emptyNewsClusterDocuments: emptyClusters,
@@ -157,7 +156,7 @@ async function collectIntegrityReport() {
     duplicateLatestArticleIds.length +
     duplicateClusterMembership.length +
     duplicateNewsSlugOwnership.length +
-    newsArticlesMissingFromLatest.length +
+    latestArticleIds.length +
     emptyClusters;
 
   return { report, issueCount };
@@ -167,17 +166,17 @@ async function main() {
   try {
     await connectDB({ socketTimeoutMS: 180000, maxPoolSize: 3 });
     const { report, issueCount } = await collectIntegrityReport();
-    process.stdout.write('\\n🧪 NEWS DATABASE INTEGRITY REPORT\\n');
+    process.stdout.write('\n🧪 NEWS DATABASE INTEGRITY REPORT\n');
     process.stdout.write(JSON.stringify(report, null, 2));
-    process.stdout.write('\\n\\n');
+    process.stdout.write('\n\n');
     if (issueCount > 0) {
-      process.stdout.write(`⚠️ Potential integrity issues found in the returned checks: ${issueCount}\\n`);
+      process.stdout.write(`⚠️ Potential integrity issues found in the returned checks: ${issueCount}\n`);
       process.exitCode = 1;
     } else {
-      process.stdout.write('✅ No integrity issues found by these checks.\\n');
+      process.stdout.write('✅ No integrity issues found by these checks.\n');
     }
   } catch (error) {
-    process.stderr.write(`❌ Integrity diagnostic failed: ${error.stack || error.message}\\n`);
+    process.stderr.write(`❌ Integrity diagnostic failed: ${error.stack || error.message}\n`);
     process.exitCode = 1;
   } finally {
     await mongoose.disconnect();
