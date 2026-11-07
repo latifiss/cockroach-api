@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { generateSlug, generateMetaDescription } = require('../../utils/helpers');
+const { generateMetaDescription } = require('../../utils/helpers');
+const { createCanonicalArticleSlug } = require('./canonicalArticle');
 const { getRepresentativeTitle } = require('../../utils/representativeTitle');
 const { bulkWriteInBatches } = require('../../utils/bulkWrite');
 
@@ -16,18 +17,16 @@ function stableClusterId(cluster) {
 }
 
 function createArticleSlug(article) {
-  const identity = String(article.article_id);
-  const identityHash = /^[a-f0-9]{64}$/i.test(identity)
-    ? identity.toLowerCase()
-    : crypto.createHash('sha256').update(identity).digest('hex');
-  return `${generateSlug(article.title) || 'article'}-${identityHash}`;
+  return article.slug || createCanonicalArticleSlug(article);
 }
 
 function createLegacyArticleSlug(article, documentId, index) {
+  const title = String(article.title || 'legacy-article');
+  const source = String(article.source_name || article.source_id || 'unknown-source');
   const identity = article.article_id ? String(article.article_id) : `${documentId}:${index}`;
-  const uniqueIdentity = `${identity}:${documentId}:${index}`;
-  const identityHash = crypto.createHash('sha256').update(uniqueIdentity).digest('hex').slice(0, 24);
-  return `${generateSlug(article.title) || 'legacy-article'}-${identityHash}`;
+  const identityHash = crypto.createHash('sha256').update(`${identity}:${documentId}:${index}`).digest('hex').slice(0, 16);
+  const { generateSlug } = require('../../utils/helpers');
+  return `${generateSlug(title).slice(0, 100) || 'legacy-article'}-${generateSlug(source).slice(0, 40) || 'unknown-source'}-${identityHash}`;
 }
 
 function prepareClusters(clusters) {
