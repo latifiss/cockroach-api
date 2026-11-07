@@ -10,6 +10,7 @@ const {
   acquirePipelineLease,
   renewPipelineLease,
   releasePipelineLease,
+  getPipelineLeaseOwner,
 } = require('../services/operations/schedulerLease');
 
 const logger = createLogger();
@@ -134,7 +135,7 @@ async function executePipeline() {
     const clusterPersistence = await persistNewsClusters(
       require('../models/news.model'),
       clusters,
-      { logger }
+      { logger, leaseOwner: getPipelineLeaseOwner() }
     );
     assertLeaseOwnership();
     logger.info('💾 News cluster persistence finished', {
