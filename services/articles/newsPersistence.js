@@ -182,6 +182,10 @@ async function persistNewsClusters(News, clusters, options = {}) {
 
   for (const document of existingDocuments) {
     const existingArticles = Array.isArray(document.articles) ? document.articles : [];
+    if (!existingArticles.length) {
+      emptyDocumentIds.push(document._id);
+      continue;
+    }
     let repairedCount = 0;
     const normalizedArticles = existingArticles.map((article, index) => {
       if (typeof article.slug === 'string' && article.slug.trim()) return article;
@@ -201,6 +205,7 @@ async function persistNewsClusters(News, clusters, options = {}) {
 
     if (!remainingArticles.length) {
       emptyDocumentIds.push(document._id);
+      continue;
     }
 
     const relevanceTotal = remainingArticles.reduce(
@@ -225,6 +230,14 @@ async function persistNewsClusters(News, clusters, options = {}) {
         },
       },
     });
+  }
+
+  let removed = 0;
+  if (emptyDocumentIds.length) {
+    const deleteResult = await News.deleteMany({
+      _id: { $in: emptyDocumentIds },
+    });
+    removed = deleteResult.deletedCount || 0;
   }
 
   if (detachOperations.length) {
@@ -262,15 +275,6 @@ async function persistNewsClusters(News, clusters, options = {}) {
       { batch, batches, retry: attempt, error: error.message }
     ),
   });
-
-  let removed = 0;
-  if (emptyDocumentIds.length) {
-    const deleteResult = await News.deleteMany({
-      _id: { $in: emptyDocumentIds },
-      articles: { $size: 0 },
-    });
-    removed = deleteResult.deletedCount || 0;
-  }
 
   const persistence = {
     ...result,
