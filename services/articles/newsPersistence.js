@@ -17,7 +17,10 @@ function stableClusterId(cluster) {
 
 function createArticleSlug(article) {
   const identity = String(article.article_id);
-  return `${generateSlug(article.title) || 'article'}-${identity.slice(0, 24)}`;
+  const identityHash = /^[a-f0-9]{64}$/i.test(identity)
+    ? identity.toLowerCase()
+    : crypto.createHash('sha256').update(identity).digest('hex');
+  return `${generateSlug(article.title) || 'article'}-${identityHash}`;
 }
 
 function prepareClusters(clusters) {
@@ -71,23 +74,98 @@ function prepareClusters(clusters) {
   return prepared;
 }
 
+function findIncomingSlugConflicts(prepared) {
+  const slugs = new Map();
+  for (const cluster of prepared) {
+    for (const article of cluster.articles) {
+      const existingId = slugs.get(article.slug);
+      if (existingId && existingId !== String(article.article_id)) {
+        const error = new Error(`Incoming articles generated the same slug: ${article.slug}`);
+        error.code = 'NEWS_SLUG_CONFLICT';
+        error.slugConflicts = [{ slug: article.slug, articleIds: [existingId, String(article.article_id)] }];
+        throw error;
+      }
+      slugs.set(article.slug, String(article.article_id));
+    }
+  }
+}
+
+function findStoredSlugConflicts(existingDocuments, incomingIds, incomingSlugs) {
+  const conflicts = [];
+  for (const document of existingDocuments) {
+    for (const article of document.articles || []) {
+      if (!incomingSlugs.has(article.slug)) continue;
+      if (incomingIds.has(String(article.article_id))) continue;
+      conflicts.push({
+        slug: article.slug,
+        existingArticleId: String(article.article_id),
+        incomingArticleId: incomingSlugs.get(article.slug),
+        clusterId: document.cluster_id,
+      });
+    }
+  }
+  return conflicts;
+}
+
 async function persistNewsClusters(News, clusters, options = {}) {
   if (!News || typeof News.find !== 'function' || typeof News.bulkWrite !== 'function') {
     throw new TypeError('A News model is required');
   }
   if (!Array.isArray(clusters)) throw new TypeError('clusters must be an array');
 
+  const rawArticleCount = clusters.reduce(
+    (total, cluster) => total + (Array.isArray(cluster) ? cluster.length : 0),
+    0
+  );
   const prepared = prepareClusters(clusters);
-  const articleIds = prepared.flatMap((cluster) => cluster.articles.map((article) => article.article_id));
+  const articleIds = prepared.flatMap((cluster) => cluster.articles.map((article) => String(article.article_id)));
+  const incomingIds = new Set(articleIds);
+  const incomingSlugs = new Map(
+    prepared.flatMap((cluster) => cluster.articles.map((article) => [article.slug, String(article.article_id)]))
+  );
+  const skipped = rawArticleCount - articleIds.length;
+
   if (!articleIds.length) {
-    return { attempted: 0, batches: 0, upserted: 0, modified: 0, detached: 0, removed: 0 };
+    return {
+      attempted: 0,
+      batches: 0,
+      upserted: 0,
+      modified: 0,
+      inserted: 0,
+      updated: 0,
+      matched: 0,
+      skipped,
+      detached: 0,
+      removed: 0,
+    };
   }
 
-  const existingQuery = News.find({ 'articles.article_id': { $in: articleIds } });
+  findIncomingSlugConflicts(prepared);
+
+  const existingQuery = News.find({
+    $or: [
+      { 'articles.article_id': { $in: articleIds } },
+      { 'articles.slug': { $in: [...incomingSlugs.keys()] } },
+    ],
+  });
   const existingDocuments = typeof existingQuery.lean === 'function'
     ? await existingQuery.lean()
     : await existingQuery;
-  const incomingIds = new Set(articleIds);
+
+  const slugConflicts = findStoredSlugConflicts(existingDocuments, incomingIds, incomingSlugs);
+  if (slugConflicts.length) {
+    const error = new Error(
+      `News persistence stopped: ${slugConflicts.length} stored article slug conflict(s) belong to different article identities`
+    );
+    error.code = 'NEWS_SLUG_CONFLICT';
+    error.slugConflicts = slugConflicts;
+    options.logger?.error('Stored news slug conflict detected; no cluster writes were performed', {
+      conflicts: slugConflicts.slice(0, 10),
+      conflictCount: slugConflicts.length,
+    });
+    throw error;
+  }
+
   const detachOperations = [];
   const emptyDocumentIds = [];
   let detached = 0;
@@ -171,7 +249,25 @@ async function persistNewsClusters(News, clusters, options = {}) {
     ),
   });
 
-  return { ...result, detached, removed };
+  const persistence = {
+    ...result,
+    inserted: result.upserted,
+    updated: result.modified,
+    skipped,
+    detached,
+    removed,
+  };
+  options.logger?.info('News cluster reconciliation completed', {
+    inserted: persistence.inserted,
+    updated: persistence.updated,
+    detached: persistence.detached,
+    skipped: persistence.skipped,
+    removed: persistence.removed,
+    attempted: persistence.attempted,
+    batches: persistence.batches,
+  });
+
+  return persistence;
 }
 
 module.exports = {
