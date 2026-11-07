@@ -86,16 +86,41 @@ test('detaches incoming articles from their previous clusters before upserting n
   assert.equal(deletions.length, 0);
 });
 
-test('removes old cluster documents that become empty after article reassignment', async () => {
+test('releases slugs from emptied clusters before writing replacement cluster documents', async () => {
   const writes = [];
   let deleteFilter;
+  let storedArticles = [{ article_id: 'article-1', title: 'Story', slug: createArticleSlug(article('article-1')) }];
   const model = {
     find() {
-      return { lean: async () => [{ _id: 'old-cluster', articles: [{ article_id: 'article-1', title: 'Story' }] }] };
+      return {
+        lean: async () => [{
+          _id: 'old-cluster',
+          cluster_id: 'old-cluster',
+          articles: storedArticles,
+        }],
+      };
     },
     async bulkWrite(operations) {
       writes.push(operations);
-      return { upsertedCount: 0, modifiedCount: operations.length };
+      for (const operation of operations) {
+        const update = operation.updateOne;
+        if (update.filter._id === 'old-cluster') {
+          storedArticles = update.update.$set.articles;
+          continue;
+        }
+        if (update.update.$set.cluster_id) {
+          const incomingSlug = update.update.$set.articles[0].slug;
+          assert.equal(
+            storedArticles.some((item) => item.slug === incomingSlug),
+            false,
+            'old cluster must release its article slug before the replacement upsert'
+          );
+        }
+      }
+      return {
+        upsertedCount: operations.filter((operation) => operation.updateOne.upsert).length,
+        modifiedCount: operations.length,
+      };
     },
     async deleteMany(filter) {
       deleteFilter = filter;
@@ -108,11 +133,10 @@ test('removes old cluster documents that become empty after article reassignment
   assert.equal(writes.length, 2);
   assert.deepEqual(writes[0][0].updateOne.update.$set.articles, []);
   assert.equal(writes[0][0].updateOne.update.$set.size, 0);
-  assert.equal(writes[1][0].updateOne.update.$set.articles[0].article_id, 'article-1');
   assert.deepEqual(deleteFilter._id.$in, ['old-cluster']);
+  assert.equal(result.detached, 1);
   assert.equal(result.removed, 1);
 });
-
 test('keeps an article in its existing cluster on an identical repeated run', async () => {
   const incoming = article('article-1');
   const clusterId = stableClusterId([incoming]);
