@@ -332,7 +332,8 @@ async function persistNewsClustersTransactional(News, prepared, options = {}) {
     try {
       await session.withTransaction(async () => {
         const now = new Date();
-        const leaseResult = await SchedulerLease.updateOne(
+        const leaseModel = options.leaseModel || SchedulerLease;
+        const leaseResult = await leaseModel.updateOne(
           { _id: 'news-intelligence-pipeline', owner: options.leaseOwner, lease_until: { $gt: now } },
           { $set: { lease_until: new Date(now.getTime() + 5 * 60 * 1000) }, $inc: { lease_revision: 1 } },
           { session }
