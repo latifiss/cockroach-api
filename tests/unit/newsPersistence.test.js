@@ -86,10 +86,11 @@ test('detaches incoming articles from their previous clusters before upserting n
   assert.equal(deletions.length, 0);
 });
 
-test('releases slugs from emptied clusters before writing replacement cluster documents', async () => {
+test('deletes emptied clusters before writing replacement cluster documents', async () => {
+  const events = [];
   const writes = [];
   let deleteFilter;
-  let storedArticles = [{ article_id: 'article-1', title: 'Story', slug: createArticleSlug(article('article-1')) }];
+  const storedArticles = [{ article_id: 'article-1', title: 'Story', slug: createArticleSlug(article('article-1')) }];
   const model = {
     find() {
       return {
@@ -101,28 +102,15 @@ test('releases slugs from emptied clusters before writing replacement cluster do
       };
     },
     async bulkWrite(operations) {
+      events.push('bulkWrite');
       writes.push(operations);
-      for (const operation of operations) {
-        const update = operation.updateOne;
-        if (update.filter._id === 'old-cluster') {
-          storedArticles = update.update.$set.articles;
-          continue;
-        }
-        if (update.update.$set.cluster_id) {
-          const incomingSlug = update.update.$set.articles[0].slug;
-          assert.equal(
-            storedArticles.some((item) => item.slug === incomingSlug),
-            false,
-            'old cluster must release its article slug before the replacement upsert'
-          );
-        }
-      }
       return {
         upsertedCount: operations.filter((operation) => operation.updateOne.upsert).length,
         modifiedCount: operations.length,
       };
     },
     async deleteMany(filter) {
+      events.push('deleteMany');
       deleteFilter = filter;
       return { deletedCount: 1 };
     },
@@ -130,10 +118,11 @@ test('releases slugs from emptied clusters before writing replacement cluster do
 
   const result = await persistNewsClusters(model, [[article('article-1')]]);
 
-  assert.equal(writes.length, 2);
-  assert.deepEqual(writes[0][0].updateOne.update.$set.articles, []);
-  assert.equal(writes[0][0].updateOne.update.$set.size, 0);
+  assert.deepEqual(events, ['deleteMany', 'bulkWrite']);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0].updateOne.upsert, true);
   assert.deepEqual(deleteFilter._id.$in, ['old-cluster']);
+  assert.equal(deleteFilter.articles, undefined);
   assert.equal(result.detached, 1);
   assert.equal(result.removed, 1);
 });
