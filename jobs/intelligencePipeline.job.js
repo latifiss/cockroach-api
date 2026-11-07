@@ -4,7 +4,7 @@ const { persistCollectionRun } = require('../services/operations/collectionPersi
 const { persistLatestArticles } = require('../services/articles/latestPersistence');
 const { persistNewsClusters } = require('../services/articles/newsPersistence');
 const { clusterNewsArticles } = require('../utils/newsCluster');
-const { generateSlug, generateMetaDescription } = require('../utils/helpers');
+const { generateMetaDescription } = require('../utils/helpers');
 const { createLogger } = require('../utils/logger');
 const { acquirePipelineLease, releasePipelineLease } = require('../services/operations/schedulerLease');
 
@@ -71,7 +71,6 @@ async function executePipeline() {
     }
     const articles = [...articlesById.values()].map((article) => ({
       ...article,
-      slug: `${generateSlug(article.title) || 'article'}-${String(article.article_id).slice(0, 24)}`,
       meta: generateMetaDescription(article),
       relevance_score: article.relevance_score ?? 1,
       isFirstParty: false,
