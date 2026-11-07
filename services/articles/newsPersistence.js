@@ -424,7 +424,7 @@ async function persistNewsClustersTransactional(News, prepared, options = {}) {
         const upsertResult = await News.bulkWrite(upsertOperations, { ordered: false, session });
         batchResult = {
           upserted: upsertResult.upsertedCount || 0,
-          modified: (upsertResult.modifiedCount || 0) + (detachResult.modifiedCount || 0),
+          modified: upsertResult.modifiedCount || 0,
           matched: upsertResult.matchedCount || 0,
           inserted: upsertResult.insertedCount || 0,
           deleted: upsertResult.deletedCount || 0,
