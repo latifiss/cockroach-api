@@ -3,6 +3,7 @@ const { generateMetaDescription } = require('../../utils/helpers');
 const { createCanonicalArticleSlug } = require('./canonicalArticle');
 const { getRepresentativeTitle } = require('../../utils/representativeTitle');
 const { bulkWriteInBatches } = require('../../utils/bulkWrite');
+const SchedulerLease = require('../../models/schedulerLease.model');
 
 function articleCompleteness(article) {
   return ['description', 'content', 'image_url', 'canonical_url', 'published_at'].reduce(
@@ -113,7 +114,7 @@ function findStoredSlugConflicts(existingDocuments, incomingIds, incomingSlugs) 
   return conflicts;
 }
 
-async function persistNewsClusters(News, clusters, options = {}) {
+async function persistNewsClustersLegacy(News, clusters, options = {}) {
   if (!News || typeof News.find !== 'function' || typeof News.bulkWrite !== 'function') {
     throw new TypeError('A News model is required');
   }
@@ -299,8 +300,179 @@ async function persistNewsClusters(News, clusters, options = {}) {
   return persistence;
 }
 
+
+async function persistNewsClustersTransactional(News, prepared, options = {}) {
+  const batchSize = options.transactionBatchSize ?? 40;
+  if (!Number.isInteger(batchSize) || batchSize < 1) throw new RangeError('transactionBatchSize must be a positive integer');
+  if (!options.leaseOwner) {
+    const error = new Error('A scheduler lease owner is required for transactional news persistence');
+    error.code = 'PIPELINE_LEASE_OWNER_REQUIRED';
+    throw error;
+  }
+  if (!News.db || typeof News.db.startSession !== 'function') {
+    throw new Error('MongoDB session support is required for transactional news persistence');
+  }
+
+  const batches = [];
+  for (let offset = 0; offset < prepared.length; offset += batchSize) batches.push(prepared.slice(offset, offset + batchSize));
+  const totals = {
+    attempted: prepared.length, batches: batches.length, upserted: 0, modified: 0,
+    matched: 0, inserted: 0, deleted: 0, skipped: options.skipped || 0, detached: 0, removed: 0,
+  };
+
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+    const batch = batches[batchIndex];
+    const batchArticleIds = batch.flatMap((cluster) => cluster.articles.map((article) => String(article.article_id)));
+    const batchIncomingIds = new Set(batchArticleIds);
+    const targetByArticleId = new Map(batch.flatMap((cluster) => cluster.articles.map((article) => [String(article.article_id), cluster.clusterId])));
+    const incomingSlugs = new Map(batch.flatMap((cluster) => cluster.articles.map((article) => [article.slug, String(article.article_id)])));
+    const session = await News.db.startSession();
+    let batchResult;
+
+    try {
+      await session.withTransaction(async () => {
+        const now = new Date();
+        const leaseResult = await SchedulerLease.updateOne(
+          { _id: 'news-intelligence-pipeline', owner: options.leaseOwner, lease_until: { $gt: now } },
+          { $set: { lease_until: new Date(now.getTime() + 5 * 60 * 1000) }, $inc: { lease_revision: 1 } },
+          { session }
+        );
+        if (leaseResult.matchedCount !== 1) {
+          const error = new Error('News persistence stopped because scheduler lease ownership was lost');
+          error.code = 'PIPELINE_LEASE_LOST';
+          throw error;
+        }
+
+        const existingDocuments = await News.find({
+          $or: [
+            { 'articles.article_id': { $in: batchArticleIds } },
+            { 'articles.slug': { $in: [...incomingSlugs.keys()] } },
+          ],
+        }).session(session).lean();
+
+        const slugConflicts = findStoredSlugConflicts(existingDocuments, batchIncomingIds, incomingSlugs);
+        if (slugConflicts.length) {
+          const error = new Error(`News persistence stopped: ${slugConflicts.length} stored article slug conflict(s) belong to different article identities`);
+          error.code = 'NEWS_SLUG_CONFLICT';
+          error.slugConflicts = slugConflicts;
+          throw error;
+        }
+
+        const detachOperations = [];
+        const emptyDocumentIds = [];
+        let detached = 0;
+
+        for (const document of existingDocuments) {
+          const existingArticles = Array.isArray(document.articles) ? document.articles : [];
+          if (!existingArticles.length) {
+            emptyDocumentIds.push(document._id);
+            continue;
+          }
+          let repairedCount = 0;
+          const normalizedArticles = existingArticles.map((article, index) => {
+            if (typeof article.slug === 'string' && article.slug.trim()) return article;
+            repairedCount += 1;
+            return { ...article, slug: createLegacyArticleSlug(article, document._id, index) };
+          });
+          const remainingArticles = normalizedArticles.filter((article) => {
+            const targetClusterId = targetByArticleId.get(String(article.article_id));
+            return !targetClusterId || targetClusterId === document.cluster_id;
+          });
+          const removedCount = normalizedArticles.length - remainingArticles.length;
+          if (!removedCount && !repairedCount) continue;
+          detached += removedCount;
+          if (!remainingArticles.length) {
+            emptyDocumentIds.push(document._id);
+            continue;
+          }
+          const relevanceTotal = remainingArticles.reduce((sum, article) => sum + (Number(article.relevance_score) || 0), 0);
+          detachOperations.push({
+            updateOne: {
+              filter: { _id: document._id },
+              update: { $set: {
+                articles: remainingArticles,
+                size: remainingArticles.length,
+                representative_title: getRepresentativeTitle(remainingArticles) || remainingArticles[0].title,
+                average_relevance: Number((relevanceTotal / remainingArticles.length).toFixed(3)),
+              } },
+            },
+          });
+        }
+
+        let removed = 0;
+        if (emptyDocumentIds.length) {
+          const deletion = await News.deleteMany({ _id: { $in: emptyDocumentIds } }, { session });
+          removed = deletion.deletedCount || 0;
+        }
+        let detachResult = { modifiedCount: 0 };
+        if (detachOperations.length) detachResult = await News.bulkWrite(detachOperations, { ordered: false, session });
+
+        const upsertOperations = batch.map((cluster) => ({
+          updateOne: {
+            filter: { cluster_id: cluster.clusterId },
+            update: { $set: {
+              cluster_id: cluster.clusterId,
+              size: cluster.articles.length,
+              representative_title: cluster.representativeTitle,
+              average_relevance: cluster.averageRelevance,
+              articles: cluster.articles,
+            } },
+            upsert: true,
+          },
+        }));
+        const upsertResult = await News.bulkWrite(upsertOperations, { ordered: false, session });
+        batchResult = {
+          upserted: upsertResult.upsertedCount || 0,
+          modified: (upsertResult.modifiedCount || 0) + (detachResult.modifiedCount || 0),
+          matched: upsertResult.matchedCount || 0,
+          inserted: upsertResult.insertedCount || 0,
+          deleted: upsertResult.deletedCount || 0,
+          detached,
+          removed,
+        };
+      }, {
+        readConcern: { level: 'snapshot' },
+        writeConcern: { w: 'majority' },
+        readPreference: 'primary',
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    for (const key of Object.keys(batchResult)) totals[key] += batchResult[key];
+    options.logger?.info('News cluster transaction committed', {
+      batch: batchIndex + 1, batches: batches.length, clusters: batch.length,
+      detached: batchResult.detached, removed: batchResult.removed,
+    });
+  }
+
+  totals.inserted = totals.upserted;
+  totals.updated = totals.modified;
+  options.logger?.info('News cluster reconciliation completed', {
+    inserted: totals.inserted, updated: totals.updated, detached: totals.detached,
+    skipped: totals.skipped, removed: totals.removed, attempted: totals.attempted, batches: totals.batches,
+  });
+  return totals;
+}
+
+async function persistNewsClusters(News, clusters, options = {}) {
+  if (!options.leaseOwner) return persistNewsClustersLegacy(News, clusters, options);
+  if (!Array.isArray(clusters)) throw new TypeError('clusters must be an array');
+  const rawArticleCount = clusters.reduce((total, cluster) => total + (Array.isArray(cluster) ? cluster.length : 0), 0);
+  const prepared = prepareClusters(clusters);
+  const articleCount = prepared.reduce((total, cluster) => total + cluster.articles.length, 0);
+  const skipped = rawArticleCount - articleCount;
+  if (!articleCount) {
+    return { attempted: 0, batches: 0, upserted: 0, modified: 0, inserted: 0, updated: 0, matched: 0, skipped, detached: 0, removed: 0 };
+  }
+  findIncomingSlugConflicts(prepared);
+  return persistNewsClustersTransactional(News, prepared, { ...options, skipped });
+}
+
 module.exports = {
   persistNewsClusters,
+  persistNewsClustersLegacy,
+  persistNewsClustersTransactional,
   prepareClusters,
   stableClusterId,
   createArticleSlug,
