@@ -456,6 +456,9 @@ async function persistNewsClustersTransactional(News, prepared, options = {}) {
 }
 
 async function persistNewsClusters(News, clusters, options = {}) {
+  if (!News || typeof News.find !== 'function' || typeof News.bulkWrite !== 'function') {
+    throw new TypeError('A News model is required');
+  }
   if (!options.leaseOwner) return persistNewsClustersLegacy(News, clusters, options);
   if (!Array.isArray(clusters)) throw new TypeError('clusters must be an array');
   const rawArticleCount = clusters.reduce((total, cluster) => total + (Array.isArray(cluster) ? cluster.length : 0), 0);
