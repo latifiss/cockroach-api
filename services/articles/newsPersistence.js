@@ -23,6 +23,13 @@ function createArticleSlug(article) {
   return `${generateSlug(article.title) || 'article'}-${identityHash}`;
 }
 
+function createLegacyArticleSlug(article, documentId, index) {
+  const identity = article.article_id ? String(article.article_id) : `${documentId}:${index}`;
+  const uniqueIdentity = `${identity}:${documentId}:${index}`;
+  const identityHash = crypto.createHash('sha256').update(uniqueIdentity).digest('hex').slice(0, 24);
+  return `${generateSlug(article.title) || 'legacy-article'}-${identityHash}`;
+}
+
 function prepareClusters(clusters) {
   const assignedArticles = new Set();
   const prepared = [];
@@ -149,6 +156,7 @@ async function persistNewsClusters(News, clusters, options = {}) {
     $or: [
       { 'articles.article_id': { $in: articleIds } },
       { 'articles.slug': { $in: [...incomingSlugs.keys()] } },
+      { 'articles.slug': null },
     ],
   });
   const existingDocuments = typeof existingQuery.lean === 'function'
@@ -175,12 +183,21 @@ async function persistNewsClusters(News, clusters, options = {}) {
 
   for (const document of existingDocuments) {
     const existingArticles = Array.isArray(document.articles) ? document.articles : [];
-    const remainingArticles = existingArticles.filter((article) => {
+    let repairedCount = 0;
+    const normalizedArticles = existingArticles.map((article, index) => {
+      if (typeof article.slug === 'string' && article.slug.trim()) return article;
+      repairedCount += 1;
+      return {
+        ...article,
+        slug: createLegacyArticleSlug(article, document._id, index),
+      };
+    });
+    const remainingArticles = normalizedArticles.filter((article) => {
       const targetClusterId = targetClusterByArticleId.get(String(article.article_id));
       return !targetClusterId || targetClusterId === document.cluster_id;
     });
-    const removedCount = existingArticles.length - remainingArticles.length;
-    if (!removedCount) continue;
+    const removedCount = normalizedArticles.length - remainingArticles.length;
+    if (!removedCount && !repairedCount) continue;
     detached += removedCount;
 
     if (!remainingArticles.length) {
