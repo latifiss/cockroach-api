@@ -105,7 +105,10 @@ test('removes old cluster documents that become empty after article reassignment
 
   const result = await persistNewsClusters(model, [[article('article-1')]]);
 
-  assert.equal(writes.length, 1);
+  assert.equal(writes.length, 2);
+  assert.deepEqual(writes[0][0].updateOne.update.$set.articles, []);
+  assert.equal(writes[0][0].updateOne.update.$set.size, 0);
+  assert.equal(writes[1][0].updateOne.update.$set.articles[0].article_id, 'article-1');
   assert.deepEqual(deleteFilter._id.$in, ['old-cluster']);
   assert.equal(result.removed, 1);
 });
