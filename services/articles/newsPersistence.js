@@ -120,6 +120,9 @@ async function persistNewsClusters(News, clusters, options = {}) {
   const prepared = prepareClusters(clusters);
   const articleIds = prepared.flatMap((cluster) => cluster.articles.map((article) => String(article.article_id)));
   const incomingIds = new Set(articleIds);
+  const targetClusterByArticleId = new Map(
+    prepared.flatMap((cluster) => cluster.articles.map((article) => [String(article.article_id), cluster.clusterId]))
+  );
   const incomingSlugs = new Map(
     prepared.flatMap((cluster) => cluster.articles.map((article) => [article.slug, String(article.article_id)]))
   );
@@ -172,9 +175,10 @@ async function persistNewsClusters(News, clusters, options = {}) {
 
   for (const document of existingDocuments) {
     const existingArticles = Array.isArray(document.articles) ? document.articles : [];
-    const remainingArticles = existingArticles.filter(
-      (article) => !incomingIds.has(String(article.article_id))
-    );
+    const remainingArticles = existingArticles.filter((article) => {
+      const targetClusterId = targetClusterByArticleId.get(String(article.article_id));
+      return !targetClusterId || targetClusterId === document.cluster_id;
+    });
     const removedCount = existingArticles.length - remainingArticles.length;
     if (!removedCount) continue;
     detached += removedCount;
@@ -213,15 +217,6 @@ async function persistNewsClusters(News, clusters, options = {}) {
     });
   }
 
-  let removed = 0;
-  if (emptyDocumentIds.length) {
-    const result = await News.deleteMany({
-      _id: { $in: emptyDocumentIds },
-      articles: { $size: 0 },
-    });
-    removed = result.deletedCount || 0;
-  }
-
   const operations = prepared.map((cluster) => ({
     updateOne: {
       filter: { cluster_id: cluster.clusterId },
@@ -248,6 +243,15 @@ async function persistNewsClusters(News, clusters, options = {}) {
       { batch, batches, retry: attempt, error: error.message }
     ),
   });
+
+  let removed = 0;
+  if (emptyDocumentIds.length) {
+    const deleteResult = await News.deleteMany({
+      _id: { $in: emptyDocumentIds },
+      articles: { $size: 0 },
+    });
+    removed = deleteResult.deletedCount || 0;
+  }
 
   const persistence = {
     ...result,
