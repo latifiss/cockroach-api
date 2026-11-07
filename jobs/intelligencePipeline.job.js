@@ -6,9 +6,14 @@ const { persistNewsClusters } = require('../services/articles/newsPersistence');
 const { clusterNewsArticles } = require('../utils/newsCluster');
 const { generateMetaDescription } = require('../utils/helpers');
 const { createLogger } = require('../utils/logger');
-const { acquirePipelineLease, releasePipelineLease } = require('../services/operations/schedulerLease');
+const {
+  acquirePipelineLease,
+  renewPipelineLease,
+  releasePipelineLease,
+} = require('../services/operations/schedulerLease');
 
 const logger = createLogger();
+const LEASE_RENEWAL_INTERVAL_MS = 60 * 1000;
 let running = false;
 const CollectionRun = require('../models/collectionRun.model');
 
@@ -28,8 +33,42 @@ async function executePipeline() {
   running = true;
   const startedAt = Date.now();
   let leaseAcquired = false;
+  let leaseLost = false;
+  let leaseRenewalTimer = null;
+  let leaseRenewalInFlight = null;
   let collectionRun = null;
   let currentStage = 'collection';
+
+  function assertLeaseOwnership() {
+    if (leaseLost) {
+      const error = new Error('Pipeline stopped because scheduler lease ownership could not be renewed');
+      error.code = 'PIPELINE_LEASE_LOST';
+      throw error;
+    }
+  }
+
+  function startLeaseRenewal() {
+    leaseRenewalTimer = setInterval(() => {
+      if (leaseLost || leaseRenewalInFlight) return;
+
+      leaseRenewalInFlight = renewPipelineLease()
+        .then((renewed) => {
+          if (!renewed) {
+            leaseLost = true;
+            logger.error('🔒 Pipeline scheduler lease was lost; no further pipeline stages will start');
+          }
+        })
+        .catch((error) => {
+          leaseLost = true;
+          logger.error('💥 Pipeline scheduler lease renewal failed; stopping further pipeline stages', { error });
+        })
+        .finally(() => {
+          leaseRenewalInFlight = null;
+        });
+    }, LEASE_RENEWAL_INTERVAL_MS);
+
+    leaseRenewalTimer.unref();
+  }
 
   try {
     leaseAcquired = await acquirePipelineLease();
@@ -38,9 +77,14 @@ async function executePipeline() {
       return null;
     }
 
-    logger.info('🚀 Intelligence pipeline started');
+    startLeaseRenewal();
+    logger.info('🚀 Intelligence pipeline started with renewable scheduler lease');
+
     const collection = await collectCanonicalArticles();
+    assertLeaseOwnership();
+
     collectionRun = await persistCollectionRun(collection);
+    assertLeaseOwnership();
 
     if (collection.succeededCount === 0) {
       await updatePipelineStage(collectionRun._id, 'collection', 'skipped', 'No publisher source completed successfully');
@@ -52,9 +96,11 @@ async function executePipeline() {
     }
 
     currentStage = 'latest_persistence';
+    assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     logger.info('💾 Latest article persistence started', { articles: collection.articles.length });
     const latest = await persistLatestArticles(collection.articles);
+    assertLeaseOwnership();
     logger.info('✅ Latest article persistence finished', {
       upserted: latest.upserted, modified: latest.modified, batches: latest.batches,
     });
@@ -79,15 +125,18 @@ async function executePipeline() {
       source_link: article.source_link || article.canonical_url || article.link || '',
     }));
     const clusters = articles.length ? await clusterNewsArticles(articles, 0.7) : [];
+    assertLeaseOwnership();
     logger.info('✅ Article clustering finished', { articles: articles.length, clusters: clusters.length });
 
     currentStage = 'news_persistence';
+    assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     const clusterPersistence = await persistNewsClusters(
       require('../models/news.model'),
       clusters,
       { logger }
     );
+    assertLeaseOwnership();
     logger.info('💾 News cluster persistence finished', {
       clusters: clusterPersistence.attempted,
       inserted: clusterPersistence.inserted,
@@ -99,10 +148,12 @@ async function executePipeline() {
     });
 
     currentStage = 'cache_refresh';
+    assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     const { updateNewsCache } = require('../controllers/news/feed.controller');
     await updateNewsCache();
 
+    assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, 'completed', 'completed');
     logger.info('🎉 Intelligence pipeline completed', {
       durationMs: Date.now() - startedAt,
@@ -127,6 +178,8 @@ async function executePipeline() {
     logger.error('💥 Intelligence pipeline failed', { stage: currentStage, error, bulkWrite: error.bulkWrite || null });
     throw error;
   } finally {
+    if (leaseRenewalTimer) clearInterval(leaseRenewalTimer);
+    if (leaseRenewalInFlight) await leaseRenewalInFlight;
     if (leaseAcquired) {
       await releasePipelineLease().catch((error) => logger.error('Failed to release pipeline scheduler lease', { error }));
     }
