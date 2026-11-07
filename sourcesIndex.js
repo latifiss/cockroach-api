@@ -410,6 +410,15 @@ const {
 const {
   fetchBFTBusinessNews,
 } = require('./sources/business-and-financial-times-business');
+const { fetchCBSNewsEntertainment } = require('./sources/cbs-entertainment');
+const { fetchCBSNewsHealth } = require('./sources/cbs-health');
+const { fetchCBSNewsMoneywatch } = require('./sources/cbs-money');
+const { fetchCBSNewsPolitics } = require('./sources/cbs-politics');
+const { fetchCBSNewsScience } = require('./sources/cbs-science');
+const { fetchCBSNewsSpace } = require('./sources/cbs-space');
+const { fetchCBSNewsTechnology } = require('./sources/cbs-technology');
+const { fetchCBSNewsUS } = require('./sources/cbs-us');
+const { fetchCBSNewsWorld } = require('./sources/cbs-world');
 
 const newsSources = [
   fetchBuzzfeedHealthNews,
@@ -703,6 +712,15 @@ const newsSources = [
   fetchDailyGuideHealthNews,
   fetchBFTEconomyNews,
   fetchBFTBusinessNews,
+  fetchCBSNewsEntertainment,
+  fetchCBSNewsHealth,
+  fetchCBSNewsMoneywatch,
+  fetchCBSNewsPolitics,
+  fetchCBSNewsScience,
+  fetchCBSNewsSpace,
+  fetchCBSNewsTechnology,
+  fetchCBSNewsUS,
+  fetchCBSNewsWorld,
 ];
 
 module.exports = newsSources;
