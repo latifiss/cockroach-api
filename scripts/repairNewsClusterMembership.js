@@ -9,16 +9,16 @@ function articleCompleteness(article) {
 }
 
 function compareOccurrences(left, right) {
-  const leftDocumentDate = new Date(left.document.updatedAt || left.document.createdAt || 0).getTime();
-  const rightDocumentDate = new Date(right.document.updatedAt || right.document.createdAt || 0).getTime();
-  if (leftDocumentDate !== rightDocumentDate) return rightDocumentDate - leftDocumentDate;
+  const completenessDifference = articleCompleteness(right.article) - articleCompleteness(left.article);
+  if (completenessDifference) return completenessDifference;
 
   const leftArticleDate = new Date(left.article.updatedAt || left.article.published_at || 0).getTime();
   const rightArticleDate = new Date(right.article.updatedAt || right.article.published_at || 0).getTime();
   if (leftArticleDate !== rightArticleDate) return rightArticleDate - leftArticleDate;
 
-  const completenessDifference = articleCompleteness(right.article) - articleCompleteness(left.article);
-  if (completenessDifference) return completenessDifference;
+  const leftDocumentDate = new Date(left.document.updatedAt || left.document.createdAt || 0).getTime();
+  const rightDocumentDate = new Date(right.document.updatedAt || right.document.createdAt || 0).getTime();
+  if (leftDocumentDate !== rightDocumentDate) return rightDocumentDate - leftDocumentDate;
 
   return String(left.document.cluster_id || left.document._id)
     .localeCompare(String(right.document.cluster_id || right.document._id));
