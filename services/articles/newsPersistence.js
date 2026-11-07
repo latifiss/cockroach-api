@@ -405,8 +405,7 @@ async function persistNewsClustersTransactional(News, prepared, options = {}) {
           const deletion = await News.deleteMany({ _id: { $in: emptyDocumentIds } }, { session });
           removed = deletion.deletedCount || 0;
         }
-        let detachResult = { modifiedCount: 0 };
-        if (detachOperations.length) detachResult = await News.bulkWrite(detachOperations, { ordered: false, session });
+        if (detachOperations.length) await News.bulkWrite(detachOperations, { ordered: false, session });
 
         const upsertOperations = batch.map((cluster) => ({
           updateOne: {
