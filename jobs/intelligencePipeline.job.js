@@ -91,9 +91,10 @@ async function executePipeline() {
     );
     logger.info('💾 News cluster persistence finished', {
       clusters: clusterPersistence.attempted,
-      upserted: clusterPersistence.upserted,
-      modified: clusterPersistence.modified,
+      inserted: clusterPersistence.inserted,
+      updated: clusterPersistence.updated,
       detached: clusterPersistence.detached,
+      skipped: clusterPersistence.skipped,
       removed: clusterPersistence.removed,
       batches: clusterPersistence.batches,
     });
@@ -112,6 +113,11 @@ async function executePipeline() {
       canonicalArticles: articles.length,
       latestUpserted: latest.upserted,
       clusters: clusterPersistence.attempted,
+      clusterArticlesInserted: clusterPersistence.inserted,
+      clusterArticlesUpdated: clusterPersistence.updated,
+      clusterArticlesDetached: clusterPersistence.detached,
+      clusterArticlesSkipped: clusterPersistence.skipped,
+      emptyClustersRemoved: clusterPersistence.removed,
     });
     return { collection, latest, clusterPersistence };
   } catch (error) {
