@@ -72,4 +72,8 @@ async function releasePipelineLease() {
   return result.matchedCount === 1;
 }
 
-module.exports = { acquirePipelineLease, renewPipelineLease, releasePipelineLease };
+function getPipelineLeaseOwner() {
+  return ownerId;
+}
+
+module.exports = { acquirePipelineLease, renewPipelineLease, releasePipelineLease, getPipelineLeaseOwner };
