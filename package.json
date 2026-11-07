@@ -7,7 +7,8 @@
     "start": "nodemon app.js",
     "test": "node --test",
     "test:watch": "node --test --watch",
-    "diagnose:integrity": "node scripts/diagnoseNewsIntegrity.js"
+    "diagnose:integrity": "node scripts/diagnoseNewsIntegrity.js",
+    "repair:cluster-membership": "node scripts/repairNewsClusterMembership.js"
   },
   "keywords": [],
   "author": "",
