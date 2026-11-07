@@ -1,6 +1,7 @@
 require('dotenv').config();
 const assert = require('node:assert/strict');
 const { connectDB, mongoose } = require('../db');
+const News = require('../models/news.model');
 const {
   acquirePipelineLease,
   releasePipelineLease,
