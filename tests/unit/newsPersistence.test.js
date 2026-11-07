@@ -109,3 +109,76 @@ test('removes old cluster documents that become empty after article reassignment
   assert.deepEqual(deleteFilter._id.$in, ['old-cluster']);
   assert.equal(result.removed, 1);
 });
+
+test('keeps an article in its existing cluster on an identical repeated run', async () => {
+  const incoming = article('article-1');
+  const clusterId = stableClusterId([incoming]);
+  const existing = {
+    _id: 'current-cluster',
+    cluster_id: clusterId,
+    articles: [{
+      ...incoming,
+      slug: createArticleSlug(incoming),
+      article_type: 'main',
+      meta: 'Story description',
+      published_at: new Date('2026-01-01T00:00:00.000Z'),
+    }],
+  };
+  const writes = [];
+  let deleteCalls = 0;
+  const model = {
+    find() {
+      return { lean: async () => [existing] };
+    },
+    async bulkWrite(operations) {
+      writes.push(operations);
+      return { upsertedCount: 0, modifiedCount: 0, matchedCount: 1 };
+    },
+    async deleteMany() {
+      deleteCalls += 1;
+      return { deletedCount: 0 };
+    },
+  };
+
+  const result = await persistNewsClusters(model, [[incoming]]);
+
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0].updateOne.filter.cluster_id, clusterId);
+  assert.equal(result.detached, 0);
+  assert.equal(result.removed, 0);
+  assert.equal(result.inserted, 0);
+  assert.equal(result.updated, 0);
+  assert.equal(deleteCalls, 0);
+});
+
+test('rejects a stored slug owned by a different article before writing', async () => {
+  const incoming = article('incoming-article');
+  const conflictingStoredArticle = {
+    article_id: 'different-article',
+    title: incoming.title,
+    slug: createArticleSlug(incoming),
+  };
+  let writeCalls = 0;
+  const model = {
+    find() {
+      return {
+        lean: async () => [{
+          _id: 'legacy-cluster',
+          cluster_id: 'legacy-cluster',
+          articles: [conflictingStoredArticle],
+        }],
+      };
+    },
+    async bulkWrite() {
+      writeCalls += 1;
+      return { upsertedCount: 0, modifiedCount: 0 };
+    },
+  };
+
+  await assert.rejects(
+    persistNewsClusters(model, [[incoming]]),
+    (error) => error.code === 'NEWS_SLUG_CONFLICT'
+      && error.slugConflicts[0].existingArticleId === 'different-article'
+  );
+  assert.equal(writeCalls, 0);
+});
