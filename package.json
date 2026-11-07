@@ -8,7 +8,8 @@
     "test": "node --test",
     "test:watch": "node --test --watch",
     "diagnose:integrity": "node scripts/diagnoseNewsIntegrity.js",
-    "repair:cluster-membership": "node scripts/repairNewsClusterMembership.js"
+    "repair:cluster-membership": "node scripts/repairNewsClusterMembership.js",
+    "test:transactions": "node scripts/testNewsPersistenceTransactions.js"
   },
   "keywords": [],
   "author": "",
