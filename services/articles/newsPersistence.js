@@ -185,7 +185,6 @@ async function persistNewsClusters(News, clusters, options = {}) {
 
     if (!remainingArticles.length) {
       emptyDocumentIds.push(document._id);
-      continue;
     }
 
     const relevanceTotal = remainingArticles.reduce(
@@ -200,8 +199,12 @@ async function persistNewsClusters(News, clusters, options = {}) {
           $set: {
             articles: remainingArticles,
             size: remainingArticles.length,
-            representative_title: getRepresentativeTitle(remainingArticles) || remainingArticles[0].title,
-            average_relevance: Number((relevanceTotal / remainingArticles.length).toFixed(3)),
+            representative_title: remainingArticles.length
+              ? getRepresentativeTitle(remainingArticles) || remainingArticles[0].title
+              : '',
+            average_relevance: remainingArticles.length
+              ? Number((relevanceTotal / remainingArticles.length).toFixed(3))
+              : 0,
           },
         },
       },
