@@ -137,6 +137,46 @@ test('releases slugs from emptied clusters before writing replacement cluster do
   assert.equal(result.detached, 1);
   assert.equal(result.removed, 1);
 });
+test('repairs legacy articles with missing slugs before cluster writes', async () => {
+  const incoming = article('article-1');
+  const legacyDocument = {
+    _id: 'legacy-cluster',
+    cluster_id: 'legacy-cluster',
+    articles: [
+      { article_id: 'legacy-article-1', title: 'Legacy story' },
+      { article_id: 'legacy-article-2', title: 'Another legacy story', slug: null },
+    ],
+  };
+  const writes = [];
+  let storedArticles = legacyDocument.articles;
+  const model = {
+    find(query) {
+      assert.ok(query.$or.some((condition) => condition['articles.slug'] === null));
+      return { lean: async () => [legacyDocument] };
+    },
+    async bulkWrite(operations) {
+      writes.push(operations);
+      if (operations[0].updateOne.filter._id === 'legacy-cluster') {
+        storedArticles = operations[0].updateOne.update.$set.articles;
+        assert.ok(storedArticles.every((item) => typeof item.slug === 'string' && item.slug.length > 0));
+        assert.equal(new Set(storedArticles.map((item) => item.slug)).size, storedArticles.length);
+      }
+      return {
+        upsertedCount: operations.filter((operation) => operation.updateOne.upsert).length,
+        modifiedCount: operations.length,
+      };
+    },
+    async deleteMany() {
+      return { deletedCount: 0 };
+    },
+  };
+
+  await persistNewsClusters(model, [[incoming]]);
+
+  assert.equal(writes.length, 2);
+  assert.ok(storedArticles.every((item) => item.slug !== null && item.slug !== undefined));
+});
+
 test('keeps an article in its existing cluster on an identical repeated run', async () => {
   const incoming = article('article-1');
   const clusterId = stableClusterId([incoming]);
