@@ -157,6 +157,7 @@ async function persistNewsClusters(News, clusters, options = {}) {
       { 'articles.slug': { $in: [...incomingSlugs.keys()] } },
       { 'articles.slug': null },
       { articles: { $size: 0 } },
+      { articles: null },
     ],
   });
   const existingDocuments = typeof existingQuery.lean === 'function'
