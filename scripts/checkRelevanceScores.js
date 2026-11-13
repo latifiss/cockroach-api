@@ -1,6 +1,41 @@
 require('dotenv').config();
 
 const mongoose = require('mongoose');
+const { scoreArticleRelevance } = require('../utils/articleRelevance');
+
+function summarizeScores(scores) {
+  const values = scores.map((item) => item.score).filter(Number.isFinite);
+  const aboveOne = scores.filter((item) => item.score > 1);
+  const examples = aboveOne
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 12)
+    .map(({ title, score, matchedFields }) => ({ title, score, matchedFields }));
+
+  return {
+    total: values.length,
+    minimum: values.length ? Math.min(...values) : null,
+    maximum: values.length ? Math.max(...values) : null,
+    average: values.length
+      ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(3))
+      : null,
+    aboveOne: aboveOne.length,
+    examples,
+  };
+}
+
+function getMatchedFields(article) {
+  const fields = [
+    ['title', article.title],
+    ['description', article.description || article.summary],
+    ['content', article.content],
+    ['categories', Array.isArray(article.categories) ? article.categories.join(' ') : ''],
+    ['source_tags', Array.isArray(article.source_tags) ? article.source_tags.join(' ') : ''],
+  ];
+
+  return fields
+    .filter(([, value]) => String(value || '').trim())
+    .map(([name, value]) => name);
+}
 
 async function run() {
   try {
@@ -11,9 +46,10 @@ async function run() {
     await mongoose.connect(process.env.MONGODB_URI, { dbName: 'api' });
 
     const db = mongoose.connection.db;
+    const latestCollection = db.collection('latests');
 
-    const [latestArticles, embeddedArticles, newsClusters, embeddedSamples] = await Promise.all([
-      db.collection('latests').aggregate([
+    const [latestArticles, embeddedArticles, newsClusters, embeddedSamples, latestSamples] = await Promise.all([
+      latestCollection.aggregate([
         {
           $group: {
             _id: null,
@@ -72,15 +108,47 @@ async function run() {
           }
         },
         { $limit: 10 }
-      ]).toArray()
+      ]).toArray(),
+
+      latestCollection.find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            title: 1,
+            description: 1,
+            summary: 1,
+            content: 1,
+            categories: 1,
+            source_tags: 1,
+            relevance_score: 1,
+          },
+        }
+      ).limit(5000).toArray(),
     ]);
 
-    console.log('\nRELEVANCE SCORE DIAGNOSTICS\n');
+    const rescored = latestSamples.map((article) => ({
+      title: article.title || '(untitled)',
+      score: scoreArticleRelevance(article),
+      matchedFields: getMatchedFields(article),
+    }));
+
+    const schema = mongoose.model('News').schema;
+    const embeddedScorePath = schema.path('articles.relevance_score');
+
+    console.log('\\nRELEVANCE SCORE DIAGNOSTICS\\n');
     console.log(JSON.stringify({
       database: 'api',
       latestArticles: latestArticles || { total: 0 },
       embeddedArticles: embeddedArticles || { total: 0 },
       newsClusters: newsClusters || { total: 0 },
+      rescoredLatestSample: summarizeScores(rescored),
+      rescoredSampleSize: latestSamples.length,
+      newsEmbeddedRelevanceScoreSchema: {
+        exists: Boolean(embeddedScorePath),
+        type: embeddedScorePath?.instance || null,
+        defaultValue: embeddedScorePath?.defaultValue ?? null,
+      },
       embeddedArticleSamples: embeddedSamples
     }, null, 2));
   } catch (error) {
