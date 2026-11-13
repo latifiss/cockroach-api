@@ -16,8 +16,8 @@ function scoreArticleRelevance(article) {
     { text: normalizeForMatching(article.title), multiplier: 2 },
     { text: normalizeForMatching(article.description || article.summary), multiplier: 1 },
     { text: normalizeForMatching(article.content), multiplier: 0.5 },
-    { text: normalizeForMatching((article.categories || []).join(' ')), multiplier: 1 },
-    { text: normalizeForMatching((article.source_tags || []).join(' ')), multiplier: 1 },
+    { text: normalizeForMatching((Array.isArray(article.categories) ? article.categories : []).join(' ')), multiplier: 1 },
+    { text: normalizeForMatching((Array.isArray(article.source_tags) ? article.source_tags : []).join(' ')), multiplier: 1 },
   ];
 
   let score = 1;
