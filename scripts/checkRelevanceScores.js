@@ -141,6 +141,7 @@ async function run() {
     const mapperScore = mapperSample ? scoreArticleRelevance(mapperSample) : null;
     const latestMapped = mapperSample ? toLatestDocument({
       ...mapperSample,
+      relevance_score: mapperScore,
       article_id: 'relevance-diagnostic',
       source_name: 'Diagnostic source',
       source_id: 'diagnostic-source',
