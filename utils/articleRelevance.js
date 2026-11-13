@@ -1,31 +1,29 @@
 const keywordRelevance = require('./keywordRelevance');
 
+function normalizeForMatching(value) {
+  return ` ${String(value || '').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim()} `;
+}
+
 const entries = Object.entries(keywordRelevance)
   .map(([keyword, weight]) => ({
-    keyword,
+    keyword: normalizeForMatching(keyword),
     weight: Number(weight),
-    pattern: new RegExp(`(^|[^\\p{L}\\p{N}])${keyword.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}([^\\p{L}\\p{N}]|$)`, 'iu'),
   }))
-  .filter((entry) => entry.keyword && Number.isFinite(entry.weight) && entry.weight > 0);
+  .filter((entry) => entry.keyword.trim() && Number.isFinite(entry.weight) && entry.weight > 0);
 
 function scoreArticleRelevance(article) {
-  const title = String(article.title || '');
-  const description = String(article.description || article.summary || '');
-  const content = String(article.content || '');
-  const categories = Array.isArray(article.categories) ? article.categories.join(' ') : '';
-  const tags = Array.isArray(article.source_tags) ? article.source_tags.join(' ') : '';
   const fields = [
-    { text: title, multiplier: 2 },
-    { text: description, multiplier: 1 },
-    { text: content, multiplier: 0.5 },
-    { text: categories, multiplier: 1 },
-    { text: tags, multiplier: 1 },
+    { text: normalizeForMatching(article.title), multiplier: 2 },
+    { text: normalizeForMatching(article.description || article.summary), multiplier: 1 },
+    { text: normalizeForMatching(article.content), multiplier: 0.5 },
+    { text: normalizeForMatching((article.categories || []).join(' ')), multiplier: 1 },
+    { text: normalizeForMatching((article.source_tags || []).join(' ')), multiplier: 1 },
   ];
 
   let score = 1;
   for (const entry of entries) {
     const multiplier = fields.reduce(
-      (total, field) => total + (entry.pattern.test(field.text) ? field.multiplier : 0),
+      (total, field) => total + (field.text.includes(entry.keyword) ? field.multiplier : 0),
       0
     );
     if (multiplier) score += entry.weight * multiplier;
