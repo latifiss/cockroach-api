@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { generateSlug } = require('../../utils/helpers');
 
 const TRACKING_PARAMETERS = new Set([
   'fbclid', 'gclid', 'dclid', 'mc_cid', 'mc_eid', 'ref', 'ref_src',
@@ -33,6 +34,14 @@ function hash(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+function createCanonicalArticleSlug(article) {
+  const title = generateSlug(article.title).slice(0, 100) || 'article';
+  const source = generateSlug(article.source_name || article.source_id || 'unknown-source').slice(0, 40) || 'unknown-source';
+  const identity = String(article.article_id || hash(`${article.source_id || 'unknown'}:${article.title || ''}`));
+  const suffix = /^[a-f0-9]{64}$/i.test(identity) ? identity.slice(0, 16).toLowerCase() : hash(identity).slice(0, 16);
+  return `${title}-${source}-${suffix}`;
+}
+
 function normalizeArticle(article, source = {}) {
   if (!article || typeof article !== 'object') return null;
   const title = normalizeText(article.title);
@@ -60,8 +69,9 @@ function normalizeArticle(article, source = {}) {
         ? article.source_tags
         : [];
 
-  return {
-    article_id: hash(identity),
+  const articleId = hash(identity);
+  const normalizedArticle = {
+    article_id: articleId,
     identity_key: identity,
     title,
     title_fingerprint: titleFingerprint,
@@ -89,6 +99,8 @@ function normalizeArticle(article, source = {}) {
     relevance_score: Number.isFinite(Number(article.relevance_score)) ? Number(article.relevance_score) : 1,
     categories: Array.isArray(article.categories) ? article.categories : [],
   };
+  normalizedArticle.slug = createCanonicalArticleSlug(normalizedArticle);
+  return normalizedArticle;
 }
 
 function deduplicateCanonicalArticles(articles) {
@@ -114,6 +126,7 @@ function completeness(article) {
 
 module.exports = {
   normalizeArticle,
+  createCanonicalArticleSlug,
   canonicalizeUrl,
   deduplicateCanonicalArticles,
   normalizeText,

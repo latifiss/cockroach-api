@@ -20,6 +20,7 @@ const articleSchema = new Schema(
     creator: { type: String, default: '' },
     slug: { type: String, required: true, trim: true, unique: true },
     image_url: { type: String, required: false },
+    link: { type: String, default: '' },
     published_at: { type: Date, required: true },
     source_origin: { type: String, default: 'Ghana' },
     source_id: { type: String, required: true, default: 'Ghweb1234567899' },

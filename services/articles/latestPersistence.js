@@ -1,5 +1,6 @@
 const Latest = require('../../models/latest.model');
-const { generateSlug, generateMetaDescription, generateMetaTitle } = require('../../utils/helpers');
+const { generateMetaDescription, generateMetaTitle } = require('../../utils/helpers');
+const { createCanonicalArticleSlug } = require('./canonicalArticle');
 const { bulkWriteInBatches } = require('../../utils/bulkWrite');
 const { createLogger } = require('../../utils/logger');
 
@@ -7,7 +8,7 @@ const logger = createLogger();
 
 function toLatestDocument(article) {
   const title = article.title.trim();
-  const slug = `${generateSlug(title) || 'article'}-${article.article_id.slice(0, 12)}`;
+  const slug = article.slug || createCanonicalArticleSlug({ ...article, title });
   const description = article.description || article.summary || '';
   const metaDescription = article.meta_description || generateMetaDescription({ ...article, summary: description });
   return {

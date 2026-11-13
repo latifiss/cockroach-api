@@ -47,11 +47,33 @@ async function acquirePipelineLease() {
   }
 }
 
+async function renewPipelineLease() {
+  const now = new Date();
+  const result = await SchedulerLease.updateOne(
+    {
+      _id: LEASE_ID,
+      owner: ownerId,
+      lease_until: { $gt: now },
+    },
+    {
+      $set: { lease_until: new Date(now.getTime() + LEASE_DURATION_MS) },
+    }
+  );
+
+  return result.matchedCount === 1;
+}
+
 async function releasePipelineLease() {
-  await SchedulerLease.updateOne(
+  const result = await SchedulerLease.updateOne(
     { _id: LEASE_ID, owner: ownerId },
     { $set: { lease_until: new Date() } }
   );
+
+  return result.matchedCount === 1;
 }
 
-module.exports = { acquirePipelineLease, releasePipelineLease };
+function getPipelineLeaseOwner() {
+  return ownerId;
+}
+
+module.exports = { acquirePipelineLease, renewPipelineLease, releasePipelineLease, getPipelineLeaseOwner };
