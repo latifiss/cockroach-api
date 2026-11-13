@@ -1,7 +1,7 @@
 const keywordRelevance = require('./keywordRelevance');
 
 function normalizeForMatching(value) {
-  return ` ${String(value || '').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim()} `;
+  return ` ${String(value || '').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
 }
 
 const entries = Object.entries(keywordRelevance)
