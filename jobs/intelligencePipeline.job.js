@@ -4,6 +4,7 @@ const { persistCollectionRun } = require('../services/operations/collectionPersi
 const { persistLatestArticles } = require('../services/articles/latestPersistence');
 const { persistNewsClusters } = require('../services/articles/newsPersistence');
 const { clusterNewsArticles } = require('../utils/newsCluster');
+const { scoreArticlesRelevance } = require('../utils/articleRelevance');
 const { generateMetaDescription } = require('../utils/helpers');
 const { createLogger } = require('../utils/logger');
 const {
@@ -82,6 +83,7 @@ async function executePipeline() {
     logger.info('🚀 Intelligence pipeline started with renewable scheduler lease');
 
     const collection = await collectCanonicalArticles();
+    collection.articles = scoreArticlesRelevance(collection.articles);
     assertLeaseOwnership();
 
     collectionRun = await persistCollectionRun(collection);
