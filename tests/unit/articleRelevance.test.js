@@ -12,7 +12,7 @@ test('scores weighted keywords in titles more strongly than body text', () => {
 
 test('matches configured keywords without case sensitivity or partial-word matches', () => {
   const upperCase = scoreArticleRelevance({ title: 'GHANA election update' });
-  const partialWord = scoreArticleRelevance({ title: 'Ghanaians discuss the election' });
+  const partialWord = scoreArticleRelevance({ title: 'Ghanaians discuss a proposal' });
 
   assert.ok(upperCase > 1);
   assert.equal(partialWord, 1);
