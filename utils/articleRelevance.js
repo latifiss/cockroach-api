@@ -18,7 +18,7 @@ function toSearchableText(value, depth = 0) {
 }
 
 function normalizeForMatching(value) {
-  return \` \${toSearchableText(value).toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} \`;
+  return ' ' + toSearchableText(value).toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim() + ' ';
 }
 
 const entries = Object.entries(keywordRelevance)
