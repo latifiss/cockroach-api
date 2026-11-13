@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const mongoose = require('mongoose');
 const { scoreArticleRelevance } = require('../utils/articleRelevance');
+const News = require('../models/news.model');
 
 function summarizeScores(scores) {
   const values = scores.map((item) => item.score).filter(Number.isFinite);
@@ -133,7 +134,7 @@ async function run() {
       matchedFields: getMatchedFields(article),
     }));
 
-    const schema = mongoose.model('News').schema;
+    const schema = News.schema;
     const embeddedScorePath = schema.path('articles.relevance_score');
 
     console.log('\\nRELEVANCE SCORE DIAGNOSTICS\\n');
