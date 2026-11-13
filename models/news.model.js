@@ -46,4 +46,6 @@ const NewsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+NewsSchema.index({ average_relevance: -1, updatedAt: -1 });
+
 module.exports = mongoose.models.News || mongoose.model('News', NewsSchema);
