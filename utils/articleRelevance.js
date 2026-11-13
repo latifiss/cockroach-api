@@ -1,7 +1,24 @@
 const keywordRelevance = require('./keywordRelevance');
 
+function toSearchableText(value, depth = 0) {
+  if (value == null || depth > 3) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => toSearchableText(item, depth + 1)).filter(Boolean).join(' ');
+  }
+  if (typeof value === 'object') {
+    return ['name', 'label', 'value', 'slug', 'title', 'category', 'tag']
+      .map((key) => toSearchableText(value[key], depth + 1))
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+}
+
 function normalizeForMatching(value) {
-  return ` ${String(value || '').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+  return ` ${toSearchableText(value).toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim()} `;
 }
 
 const entries = Object.entries(keywordRelevance)
@@ -16,8 +33,8 @@ function scoreArticleRelevance(article) {
     { text: normalizeForMatching(article.title), multiplier: 2 },
     { text: normalizeForMatching(article.description || article.summary), multiplier: 1 },
     { text: normalizeForMatching(article.content), multiplier: 0.5 },
-    { text: normalizeForMatching((Array.isArray(article.categories) ? article.categories : []).join(' ')), multiplier: 1 },
-    { text: normalizeForMatching((Array.isArray(article.source_tags) ? article.source_tags : []).join(' ')), multiplier: 1 },
+    { text: normalizeForMatching(article.categories), multiplier: 1 },
+    { text: normalizeForMatching(article.source_tags), multiplier: 1 },
   ];
 
   let score = 1;
