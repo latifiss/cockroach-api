@@ -3,6 +3,8 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const { scoreArticleRelevance } = require('../utils/articleRelevance');
 const News = require('../models/news.model');
+const { toLatestDocument } = require('../services/articles/latestPersistence');
+const { prepareClusters } = require('../services/articles/newsPersistence');
 
 function summarizeScores(scores) {
   const values = scores.map((item) => item.score).filter(Number.isFinite);
@@ -135,6 +137,31 @@ async function run() {
     }));
 
     const schema = News.schema;
+    const mapperSample = latestSamples.find((article) => scoreArticleRelevance(article) > 1);
+    const mapperScore = mapperSample ? scoreArticleRelevance(mapperSample) : null;
+    const latestMapped = mapperSample ? toLatestDocument({
+      ...mapperSample,
+      article_id: 'relevance-diagnostic',
+      source_name: 'Diagnostic source',
+      source_id: 'diagnostic-source',
+      published_at: new Date(),
+    }) : null;
+    const preparedNews = mapperSample ? prepareClusters([[
+      {
+        ...mapperSample,
+        article_id: 'relevance-diagnostic',
+        source_name: 'Diagnostic source',
+        source_id: 'diagnostic-source',
+        source_link: mapperSample.link || 'https://example.com/diagnostic',
+        published_at: new Date(),
+        relevance_score: mapperScore,
+      },
+    ]]) : [];
+    const newsModelDocument = mapperSample ? new News({
+      cluster_id: 'relevance-diagnostic',
+      articles: preparedNews[0]?.articles || [],
+      average_relevance: preparedNews[0]?.averageRelevance || 0,
+    }).toObject() : null;
     const embeddedScorePath = schema.path('articles.relevance_score');
 
     console.log('\\nRELEVANCE SCORE DIAGNOSTICS\\n');
@@ -145,6 +172,13 @@ async function run() {
       newsClusters: newsClusters || { total: 0 },
       rescoredLatestSample: summarizeScores(rescored),
       rescoredSampleSize: latestSamples.length,
+      mapperRoundTrip: {
+        inputScore: mapperScore,
+        latestDocumentScore: latestMapped?.relevance_score ?? null,
+        preparedNewsArticleScore: preparedNews[0]?.articles[0]?.relevance_score ?? null,
+        newsModelDocumentScore: newsModelDocument?.articles?.[0]?.relevance_score ?? null,
+        preparedNewsAverageRelevance: preparedNews[0]?.averageRelevance ?? null,
+      },
       newsEmbeddedRelevanceScoreSchema: {
         exists: Boolean(embeddedScorePath),
         type: embeddedScorePath?.instance || null,
