@@ -25,7 +25,10 @@ async function updateNewsCache() {
   if (cachedNews.isUpdating) return;
   cachedNews.isUpdating = true;
   try {
-    const storedClusters = await News.find().sort({ average_relevance: -1, updatedAt: -1 }).lean();
+    const storedClusters = await News.find()
+      .sort({ average_relevance: -1, updatedAt: -1 })
+      .allowDiskUse(true)
+      .lean();
     const clusters = storedClusters.map((cluster) => cluster.articles || []);
     cachedNews = {
       clusters,

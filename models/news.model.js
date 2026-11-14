@@ -11,6 +11,7 @@ const articleSchema = new Schema(
     description: { type: String, required: false },
     content: { type: String, required: false },
     categories: [{ type: String, trim: true }],
+    relevance_score: { type: Number, default: 1, min: 0 },
     isBreaking: { type: Boolean, required: true, enum: [true, false], default: false },
     label: { type: String, required: false, trim: true },
     has_image: { type: Boolean, required: true, enum: [true, false], default: true },
@@ -45,5 +46,7 @@ const NewsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+NewsSchema.index({ average_relevance: -1, updatedAt: -1 });
 
 module.exports = mongoose.models.News || mongoose.model('News', NewsSchema);
