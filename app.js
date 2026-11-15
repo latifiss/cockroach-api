@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const cluster = require('cluster');
 const os = require('os');
-const { connectDB, isDBConnected, mongoose } = require('./db');
+const { connectDB, ensureApplicationIndexes, isDBConnected, mongoose } = require('./db');
 const { loadRuntimeConfig } = require('./config/runtime');
 const { createLogger } = require('./utils/logger');
 
@@ -107,6 +107,7 @@ if (cluster.isPrimary) {
     try {
       await connectDB();
       if (process.env.SCHEDULER_WORKER === 'true') {
+        await ensureApplicationIndexes();
         const sourcePollingStarted = await startSourcePolling();
         if (sourcePollingStarted) {
           logger.info('Continuous source ingestion started', { workerId: cluster.worker.id });
