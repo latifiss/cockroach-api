@@ -1,8 +1,43 @@
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 
+function compactValue(value) {
+  if (value instanceof Error) {
+    return `${value.name}: ${value.message}`;
+  }
+  if (value && typeof value === 'object') {
+    const compact = Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !['stack', 'cause'].includes(key))
+        .map(([key, item]) => [key, item instanceof Error ? `${item.name}: ${item.message}` : item])
+    );
+    return JSON.stringify(compact);
+  }
+  return String(value ?? '')
+    .replace(/\\s+/g, ' ')
+    .trim();
+}
+
+function installCompactConsole() {
+  if (console.__compactLoggingInstalled) return;
+
+  for (const [method, emoji] of [['error', '❌'], ['warn', '⚠️']]) {
+    const original = console[method].bind(console);
+    console[method] = (...args) => {
+      const message = args.map(compactValue).filter(Boolean).join(' | ');
+      const prefix = message.startsWith(emoji) ? '' : `${emoji} `;
+      original(`${prefix}${message}`);
+    };
+  }
+
+  Object.defineProperty(console, '__compactLoggingInstalled', {
+    value: true,
+    configurable: false,
+  });
+}
+
 function serializeError(error) {
   if (!(error instanceof Error)) return error;
-  return { name: error.name, message: error.message, stack: error.stack };
+  return { name: error.name, message: error.message, code: error.code };
 }
 
 function createLogger(options = {}) {
@@ -14,17 +49,17 @@ function createLogger(options = {}) {
     if (LEVELS[level] < threshold) return;
     if (pretty) {
       const details = Object.entries(context)
-        .map(([key, value]) => `${key}: ${value instanceof Error ? value.message : typeof value === 'object' ? JSON.stringify(value) : value}`)
+        .map(([key, value]) => `${key}: ${compactValue(value)}`)
         .join(' | ');
       const prefix = { debug: '🔎', info: 'ℹ️', warn: '⚠️', error: '❌' }[level];
       const method = level === 'debug' ? 'log' : level;
-      (sink[method] || sink.log).call(sink, `${prefix} ${message}${details ? ` — ${details}` : ''}`);
+      (sink[method] || sink.log).call(sink, `${prefix} ${String(message).replace(/\\s+/g, ' ').trim()}${details ? ` — ${details}` : ''}`);
       return;
     }
     const record = {
       timestamp: new Date().toISOString(),
       level,
-      message: String(message),
+      message: String(message).replace(/\\s+/g, ' ').trim(),
       ...Object.fromEntries(Object.entries(context).map(([key, value]) => [key, serializeError(value)])),
     };
     const method = level === 'debug' ? 'log' : level;
@@ -39,4 +74,6 @@ function createLogger(options = {}) {
   });
 }
 
-module.exports = { createLogger };
+installCompactConsole();
+
+module.exports = { createLogger, installCompactConsole };
