@@ -14,6 +14,10 @@ const { loadRuntimeConfig } = require('../../config/runtime');
 const { createLogger } = require('../../utils/logger');
 const { randomUUID } = require('crypto');
 const SchedulerLease = require('../../models/schedulerLease.model');
+const {
+  findQueuedAndRecentArticles,
+  findRecentlyIngestedArticles,
+} = require('../articles/latestIntelligenceQueries');
 
 const logger = createLogger();
 const POLL_INTERVAL_MS = Math.max(30000, Number.parseInt(process.env.SOURCE_POLL_INTERVAL_MS, 10) || 5 * 60 * 1000);
@@ -31,6 +35,7 @@ let intelligenceQueue = Promise.resolve();
 let pendingArticleIds = new Set();
 let retryArticleIds = [];
 let activePolls = 0;
+let recoveryRetryTimer = null;
 let sourcePollingLeaseTimer = null;
 let metricsPublishTimer = null;
 let intelligenceStage = 'idle';
@@ -156,16 +161,12 @@ async function processIntelligenceQueue() {
   });
   scheduleMetricsPublish();
   const cutoff = new Date(Date.now() - INTELLIGENCE_LOOKBACK_HOURS * 60 * 60 * 1000);
-  const [queuedArticles, recentArticles] = await Promise.all([
-    Latest.find({ article_id: { $in: queuedIds } }).lean(),
-    Latest.find({
-      published_at: { $gte: cutoff },
-      article_id: { $nin: queuedIds },
-    })
-      .sort({ published_at: -1 })
-      .limit(INTELLIGENCE_ARTICLE_LIMIT)
-      .lean(),
-  ]);
+  const [queuedArticles, recentArticles] = await findQueuedAndRecentArticles(Latest, {
+    queuedIds,
+    cutoff,
+    limit: INTELLIGENCE_ARTICLE_LIMIT,
+    logger,
+  });
 
   const articlesById = new Map();
   for (const article of [...queuedArticles, ...recentArticles]) {
@@ -306,17 +307,22 @@ async function collectOneSource(source) {
 
 async function queueRecentArticlesForIntelligence() {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recent = await Latest.find({
-    $or: [
-      { first_seen_at: { $gte: cutoff } },
-      { published_at: { $gte: cutoff } },
-    ],
-  })
-    .sort({ first_seen_at: -1, published_at: -1 })
-    .limit(INTELLIGENCE_ARTICLE_LIMIT)
-    .select('article_id')
-    .lean();
+  const recent = await findRecentlyIngestedArticles(Latest, {
+    cutoff,
+    limit: INTELLIGENCE_ARTICLE_LIMIT,
+    logger,
+  });
   scheduleIntelligence(recent.map((article) => article.article_id).filter(Boolean));
+}
+
+function retryStartupRecovery(error) {
+  logger.error('Failed to queue recently ingested articles after startup; retrying in 30 seconds', { error });
+  if (stopped || recoveryRetryTimer) return;
+  recoveryRetryTimer = setTimeout(() => {
+    recoveryRetryTimer = null;
+    queueRecentArticlesForIntelligence().catch(retryStartupRecovery);
+  }, 30000);
+  recoveryRetryTimer.unref?.();
 }
 
 async function acquireSourcePollingLease() {
@@ -410,7 +416,7 @@ async function startSourcePolling() {
     timer.unref();
     sourcePollingTimers.set(source.id, timer);
   }
-  queueRecentArticlesForIntelligence().catch((error) => logger.error('Failed to queue recently ingested articles after startup', { error }));
+  queueRecentArticlesForIntelligence().catch(retryStartupRecovery);
   return true;
 }
 
@@ -421,6 +427,8 @@ async function stopSourcePolling() {
   for (const timer of sourcePollingTimers.values()) clearInterval(timer);
   sourcePollingTimers.clear();
   if (intelligenceTimer) clearTimeout(intelligenceTimer);
+  if (recoveryRetryTimer) clearTimeout(recoveryRetryTimer);
+  recoveryRetryTimer = null;
   await intelligenceQueue;
   while (activePolls > 0) await wait(100);
   await SchedulerLease.updateOne(

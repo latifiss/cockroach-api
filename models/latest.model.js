@@ -39,6 +39,13 @@ const latestSchema = new Schema(
   { timestamps: true }
 );
 
+latestSchema.index({ article_id: 1 }, { name: 'latest_article_id_idx' });
+latestSchema.index({ published_at: -1 }, { name: 'latest_published_at_idx' });
+latestSchema.index(
+  { first_seen_at: -1, published_at: -1 },
+  { name: 'latest_first_seen_published_at_idx' }
+);
+
 const Latest = mongoose.models.Latest || mongoose.model('Latest', latestSchema);
 
 module.exports = Latest;
