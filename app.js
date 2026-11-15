@@ -15,7 +15,6 @@ const feedRouter = require('./routes/news/feed.routes');
 const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
 const operationsRouter = require('./routes/operations.routes');
-const { updateNewsCache } = require('./controllers/news/feed.controller');
 const { intelligencePipelineJob } = require('./jobs/intelligencePipeline.job');
 const { startSourcePolling, stopSourcePolling } = require('./services/collection/sourcePollingService');
 
@@ -97,10 +96,6 @@ if (cluster.isPrimary) {
     logger.info('API worker listening', { pid: process.pid, port: config.port, workerId: cluster.worker.id });
     try {
       await connectDB();
-      await updateNewsCache()
-        .then(() => logger.info('News feed cache initialized', { workerId: cluster.worker.id }))
-        .catch((error) => logger.error('Initial news feed cache refresh failed; requests will retry', { error, workerId: cluster.worker.id }));
-
       if (process.env.SCHEDULER_WORKER === 'true') {
         startSourcePolling();
         logger.info('Continuous source ingestion started', { workerId: cluster.worker.id });
