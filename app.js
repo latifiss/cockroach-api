@@ -16,7 +16,8 @@ const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
 const operationsRouter = require('./routes/operations.routes');
 const { updateNewsCache } = require('./controllers/news/feed.controller');
-const { intelligencePipelineJob, executePipeline } = require('./jobs/intelligencePipeline.job');
+const { intelligencePipelineJob } = require('./jobs/intelligencePipeline.job');
+const { startSourcePolling, stopSourcePolling } = require('./services/collection/sourcePollingService');
 
 if (cluster.isPrimary) {
   logger.info('Primary process started', { pid: process.pid });
@@ -84,6 +85,7 @@ if (cluster.isPrimary) {
     shuttingDown = true;
     logger.info('API worker shutting down', { signal, pid: process.pid });
     intelligencePipelineJob.stop();
+    await stopSourcePolling().catch((error) => logger.error('Source polling shutdown failed', { error }));
     if (server) await new Promise((resolve) => server.close(resolve));
     await mongoose.disconnect();
     process.exit(0);
@@ -100,9 +102,8 @@ if (cluster.isPrimary) {
         .catch((error) => logger.error('Initial news feed cache refresh failed; requests will retry', { error, workerId: cluster.worker.id }));
 
       if (process.env.SCHEDULER_WORKER === 'true') {
-        intelligencePipelineJob.start();
-        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 5 });
-        executePipeline().catch((error) => logger.error('Initial pipeline execution failed', { error }));
+        startSourcePolling();
+        logger.info('Continuous source ingestion started', { workerId: cluster.worker.id });
       }
     } catch (error) {
       logger.error('Worker initialization failed', { error });
