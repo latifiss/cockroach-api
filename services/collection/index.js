@@ -57,6 +57,7 @@ async function collectCanonicalArticles(options = {}) {
   logger.info('NEWS COLLECTION STARTED');
   logger.info('Registered sources', { count: registry.length });
 
+  let sourcePersistenceQueue = Promise.resolve();
   const run = await withCleanScraperErrors(() => runCollection(registry, {
     concurrency: options.concurrency ?? registry.length,
     timeoutMs: options.timeoutMs ?? config.collectionTimeoutMs,
@@ -67,7 +68,8 @@ async function collectCanonicalArticles(options = {}) {
       const articles = deduplicateCanonicalArticles(
         result.articles.map((article) => normalizeArticle(article, result.source)).filter(Boolean)
       );
-      await options.onSourceArticles({ result, articles });
+      sourcePersistenceQueue = sourcePersistenceQueue.then(() => options.onSourceArticles({ result, articles }));
+      await sourcePersistenceQueue;
     },
   }));
 
