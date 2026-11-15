@@ -14,7 +14,7 @@ function authorizeOperations(req, res, next) {
   const token = process.env.OPS_API_TOKEN;
   if (!token) return res.status(404).json({ error: 'Not found' });
   const authorization = req.get('authorization');
-  const suppliedToken = authorization?.match(/^Bearer\\s+(.+)$/i)?.[1]?.trim() ?? authorization?.trim();
+  const suppliedToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? authorization?.trim();
   if (suppliedToken !== token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
