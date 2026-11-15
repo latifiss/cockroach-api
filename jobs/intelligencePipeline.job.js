@@ -21,9 +21,32 @@ const CollectionRun = require('../models/collectionRun.model');
 
 async function updatePipelineStage(collectionRunId, stage, status = 'running', error = null) {
   if (!collectionRunId) return;
+  const now = new Date();
+  const update = {
+    pipeline_status: status,
+    pipeline_stage: stage,
+    pipeline_error: error,
+    pipeline_heartbeat_at: now,
+  };
+
+  if (status === 'running') {
+    update.pipeline_stage_started_at = now;
+    update.pipeline_stage_completed_at = null;
+    update.pipeline_stage_duration_ms = null;
+  } else {
+    update.pipeline_stage_completed_at = now;
+    update.pipeline_completed_at = now;
+    update.pipeline_stage_duration_ms = null;
+  }
+
+  await CollectionRun.updateOne({ _id: collectionRunId }, { $set: update });
+}
+
+async function updatePipelineHeartbeat(collectionRunId) {
+  if (!collectionRunId) return;
   await CollectionRun.updateOne(
-    { _id: collectionRunId },
-    { $set: { pipeline_status: status, pipeline_stage: stage, pipeline_error: error } }
+    { _id: collectionRunId, pipeline_status: 'running' },
+    { $set: { pipeline_heartbeat_at: new Date() } }
   );
 }
 
@@ -54,11 +77,14 @@ async function executePipeline() {
       if (leaseLost || leaseRenewalInFlight) return;
 
       leaseRenewalInFlight = renewPipelineLease()
-        .then((renewed) => {
+        .then(async (renewed) => {
           if (!renewed) {
             leaseLost = true;
             logger.error('🔒 Pipeline scheduler lease was lost; no further pipeline stages will start');
+            return;
           }
+          await updatePipelineHeartbeat(collectionRun?._id)
+            .catch((error) => logger.error('Failed to persist pipeline heartbeat', { error }));
         })
         .catch((error) => {
           leaseLost = true;
@@ -87,10 +113,38 @@ async function executePipeline() {
     assertLeaseOwnership();
 
     collectionRun = await persistCollectionRun(collection);
+    await CollectionRun.updateOne(
+      { _id: collectionRun._id },
+      {
+        $set: {
+          pipeline_status: 'running',
+          pipeline_stage: 'collection',
+          pipeline_started_at: new Date(startedAt),
+          pipeline_heartbeat_at: new Date(),
+          pipeline_stage_started_at: new Date(startedAt),
+          pipeline_error: null,
+        },
+      }
+    );
     assertLeaseOwnership();
 
     if (collection.succeededCount === 0) {
-      await updatePipelineStage(collectionRun._id, 'collection', 'skipped', 'No publisher source completed successfully');
+      const completedAt = new Date();
+      await CollectionRun.updateOne(
+        { _id: collectionRun._id },
+        {
+          $set: {
+            pipeline_status: 'skipped',
+            pipeline_stage: 'skipped',
+            pipeline_error: 'No publisher source completed successfully',
+            pipeline_completed_at: completedAt,
+            pipeline_heartbeat_at: completedAt,
+            pipeline_duration_ms: completedAt.getTime() - startedAt,
+            pipeline_stage_completed_at: completedAt,
+            pipeline_stage_duration_ms: completedAt.getTime() - startedAt,
+          },
+        }
+      );
       logger.error('Collection produced no successful source results; preserving existing article and cluster data', {
         sourceCount: collection.sourceCount,
         failedCount: collection.failedCount,
@@ -157,9 +211,25 @@ async function executePipeline() {
     await updateNewsCache();
 
     assertLeaseOwnership();
-    await updatePipelineStage(collectionRun._id, 'completed', 'completed');
+    const completedAt = new Date();
+    await CollectionRun.updateOne(
+      { _id: collectionRun._id },
+      {
+        $set: {
+          pipeline_status: 'completed',
+          pipeline_stage: 'completed',
+          pipeline_error: null,
+          pipeline_completed_at: completedAt,
+          pipeline_heartbeat_at: completedAt,
+          pipeline_duration_ms: completedAt.getTime() - startedAt,
+          pipeline_stage_completed_at: completedAt,
+          pipeline_stage_duration_ms: completedAt.getTime()
+            - new Date(collectionRun.pipeline_stage_started_at || startedAt).getTime(),
+        },
+      }
+    );
     logger.info('🎉 Intelligence pipeline completed', {
-      durationMs: Date.now() - startedAt,
+      durationMs: completedAt.getTime() - startedAt,
       sources: collection.sourceCount,
       successfulSources: collection.succeededCount,
       failedSources: collection.failedCount,
@@ -175,8 +245,21 @@ async function executePipeline() {
     return { collection, latest, clusterPersistence };
   } catch (error) {
     if (collectionRun?._id) {
-      await updatePipelineStage(collectionRun._id, currentStage, 'failed', error.message)
-        .catch((persistenceError) => logger.error('Failed to record pipeline failure', { error: persistenceError }));
+      const completedAt = new Date();
+      await CollectionRun.updateOne(
+        { _id: collectionRun._id },
+        {
+          $set: {
+            pipeline_status: 'failed',
+            pipeline_stage: currentStage,
+            pipeline_error: error.message,
+            pipeline_completed_at: completedAt,
+            pipeline_heartbeat_at: completedAt,
+            pipeline_duration_ms: completedAt.getTime() - startedAt,
+            pipeline_stage_completed_at: completedAt,
+          },
+        }
+      ).catch((persistenceError) => logger.error('Failed to record pipeline failure', { error: persistenceError }));
     }
     logger.error('💥 Intelligence pipeline failed', { stage: currentStage, error, bulkWrite: error.bulkWrite || null });
     throw error;
