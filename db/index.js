@@ -6,6 +6,7 @@ const { getMongoConnectionOptions } = require('./connectionOptions');
 
 const logger = createLogger();
 let connectionPromise = null;
+let indexPromise = null;
 let disconnectedAt = null;
 
 mongoose.connection.on('disconnected', () => {
@@ -45,6 +46,7 @@ async function connectDB(options = {}) {
     ...getMongoConnectionOptions(),
     ...options,
     dbName: options.dbName || process.env.MONGODB_DB_NAME || 'api',
+    autoIndex: false,
   };
   delete connectionOptions.uri;
 
@@ -72,8 +74,37 @@ async function connectDB(options = {}) {
   return connectionPromise;
 }
 
+async function ensureApplicationIndexes() {
+  if (indexPromise) return indexPromise;
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('MongoDB must be connected before ensuring indexes');
+  }
+
+  indexPromise = (async () => {
+    const modelNames = mongoose.modelNames().sort();
+    const startedAt = Date.now();
+    logger.info('MongoDB index setup started', { models: modelNames.length });
+
+    for (const modelName of modelNames) {
+      const model = mongoose.model(modelName);
+      await model.createIndexes();
+    }
+
+    logger.info('MongoDB index setup completed', {
+      models: modelNames.length,
+      durationMs: Date.now() - startedAt,
+    });
+  })().catch((error) => {
+    indexPromise = null;
+    logger.error('MongoDB index setup failed', { error });
+    throw error;
+  });
+
+  return indexPromise;
+}
+
 function isDBConnected() {
   return mongoose.connection.readyState === 1;
 }
 
-module.exports = { connectDB, isDBConnected, mongoose };
+module.exports = { connectDB, ensureApplicationIndexes, isDBConnected, mongoose };
