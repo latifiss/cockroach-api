@@ -6,6 +6,7 @@ const schedulerLeaseSchema = new mongoose.Schema({
   lease_until: { type: Date, required: true },
   acquired_at: { type: Date, required: true },
   lease_revision: { type: Number, default: 0 },
+  polling_metrics: { type: mongoose.Schema.Types.Mixed, default: null },
 }, { versionKey: false });
 
 module.exports = mongoose.models.SchedulerLease || mongoose.model('SchedulerLease', schedulerLeaseSchema);
