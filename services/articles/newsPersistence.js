@@ -455,6 +455,136 @@ async function persistNewsClustersTransactional(News, prepared, options = {}) {
   return totals;
 }
 
+async function persistNewsClustersIncremental(News, clusters, options = {}) {
+  if (!News || typeof News.find !== 'function' || typeof News.bulkWrite !== 'function') {
+    throw new TypeError('A News model is required');
+  }
+  if (!Array.isArray(clusters)) throw new TypeError('clusters must be an array');
+
+  const rawArticleCount = clusters.reduce(
+    (total, cluster) => total + (Array.isArray(cluster) ? cluster.length : 0),
+    0
+  );
+  const prepared = prepareClusters(clusters);
+  const articleIds = prepared.flatMap((cluster) => cluster.articles.map((article) => String(article.article_id)));
+  const incomingIds = new Set(articleIds);
+  const incomingSlugs = new Map(
+    prepared.flatMap((cluster) => cluster.articles.map((article) => [article.slug, String(article.article_id)]))
+  );
+  const skipped = rawArticleCount - articleIds.length;
+
+  if (!articleIds.length) {
+    return { attempted: 0, batches: 0, upserted: 0, modified: 0, inserted: 0, updated: 0, matched: 0, skipped, detached: 0, removed: 0 };
+  }
+
+  findIncomingSlugConflicts(prepared);
+  const existingDocuments = await News.find({
+    $or: [
+      { 'articles.article_id': { $in: articleIds } },
+      { 'articles.slug': { $in: [...incomingSlugs.keys()] } },
+    ],
+  }).lean();
+
+  const slugConflicts = findStoredSlugConflicts(existingDocuments, incomingIds, incomingSlugs);
+  if (slugConflicts.length) {
+    const error = new Error(`Incremental news persistence stopped: ${slugConflicts.length} stored article slug conflict(s)`);
+    error.code = 'NEWS_SLUG_CONFLICT';
+    error.slugConflicts = slugConflicts;
+    throw error;
+  }
+
+  const detachOperations = [];
+  const emptyDocumentIds = [];
+  let detached = 0;
+
+  for (const document of existingDocuments) {
+    const existingArticles = Array.isArray(document.articles) ? document.articles : [];
+    const remainingArticles = existingArticles.filter((article) => !incomingIds.has(String(article.article_id)));
+    const removedCount = existingArticles.length - remainingArticles.length;
+    if (!removedCount) continue;
+    detached += removedCount;
+
+    if (!remainingArticles.length) {
+      emptyDocumentIds.push(document._id);
+      continue;
+    }
+
+    const relevanceTotal = remainingArticles.reduce(
+      (sum, article) => sum + (Number(article.relevance_score) || 0),
+      0
+    );
+    detachOperations.push({
+      updateOne: {
+        filter: { _id: document._id },
+        update: {
+          $set: {
+            articles: remainingArticles,
+            size: remainingArticles.length,
+            representative_title: getRepresentativeTitle(remainingArticles) || remainingArticles[0].title,
+            average_relevance: Number((relevanceTotal / remainingArticles.length).toFixed(3)),
+          },
+        },
+      },
+    });
+  }
+
+  let removed = 0;
+  if (emptyDocumentIds.length) {
+    const deletion = await News.deleteMany({ _id: { $in: emptyDocumentIds } });
+    removed = deletion.deletedCount || 0;
+  }
+
+  if (detachOperations.length) {
+    await bulkWriteInBatches(News, detachOperations, {
+      batchSize: options.batchSize ?? 100,
+      maxRetries: options.maxRetries ?? 2,
+      retryDelayMs: options.retryDelayMs ?? 500,
+      ordered: false,
+    });
+  }
+
+  const operations = prepared.map((cluster) => ({
+    updateOne: {
+      filter: { cluster_id: cluster.clusterId },
+      update: {
+        $set: {
+          cluster_id: cluster.clusterId,
+          size: cluster.articles.length,
+          representative_title: cluster.representativeTitle,
+          average_relevance: cluster.averageRelevance,
+          articles: cluster.articles,
+        },
+      },
+      upsert: true,
+    },
+  }));
+
+  const result = await bulkWriteInBatches(News, operations, {
+    batchSize: options.batchSize ?? 100,
+    maxRetries: options.maxRetries ?? 2,
+    retryDelayMs: options.retryDelayMs ?? 500,
+    ordered: false,
+  });
+
+  const persistence = {
+    ...result,
+    inserted: result.upserted,
+    updated: result.modified,
+    skipped,
+    detached,
+    removed,
+  };
+  options.logger?.info('Incremental news cluster persistence completed', {
+    inserted: persistence.inserted,
+    updated: persistence.updated,
+    detached: persistence.detached,
+    removed: persistence.removed,
+    attempted: persistence.attempted,
+    batches: persistence.batches,
+  });
+  return persistence;
+}
+
 async function persistNewsClusters(News, clusters, options = {}) {
   if (!News || typeof News.find !== 'function' || typeof News.bulkWrite !== 'function') {
     throw new TypeError('A News model is required');
@@ -476,6 +606,7 @@ module.exports = {
   persistNewsClusters,
   persistNewsClustersLegacy,
   persistNewsClustersTransactional,
+  persistNewsClustersIncremental,
   prepareClusters,
   stableClusterId,
   createArticleSlug,
