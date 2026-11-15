@@ -74,9 +74,9 @@ function attachMongoClientMonitoring(client, logger) {
       durationMs: event.duration,
       error: event.failure,
     });
-    client.on('error', (error) => {
-      logger.error('MongoDB driver client error', { error });
-    });
+  });
+  client.on('error', (error) => {
+    logger.error('MongoDB driver client error', { error });
   });
   client.on('serverHeartbeatFailed', (event) => {
     const now = Date.now();
