@@ -58,10 +58,17 @@ async function collectCanonicalArticles(options = {}) {
   logger.info('Registered sources', { count: registry.length });
 
   const run = await withCleanScraperErrors(() => runCollection(registry, {
-    concurrency: options.concurrency ?? config.collectionConcurrency,
+    concurrency: options.concurrency ?? registry.length,
     timeoutMs: options.timeoutMs ?? config.collectionTimeoutMs,
     retryAttempts: options.retryAttempts ?? config.collectionRetryAttempts,
     retryDelayMs: options.retryDelayMs ?? config.collectionRetryDelayMs,
+    onResult: async (result) => {
+      if (result.status !== 'succeeded' || typeof options.onSourceArticles !== 'function') return;
+      const articles = deduplicateCanonicalArticles(
+        result.articles.map((article) => normalizeArticle(article, result.source)).filter(Boolean)
+      );
+      await options.onSourceArticles({ result, articles });
+    },
   }));
 
   logCollectionSummary(run);
