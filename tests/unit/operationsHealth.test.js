@@ -10,19 +10,22 @@ const {
   serializeLease,
 } = require('../../controllers/operations.controller');
 
-test('pipeline status distinguishes missing, active, stale, failed and degraded runs', () => {
+test('pipeline status uses the latest heartbeat rather than total stage age', () => {
   const now = new Date('2026-11-15T10:00:00.000Z');
   assert.equal(getPipelineStatus(null, now), 'unknown');
   assert.equal(getPipelineStatus({
     pipeline_status: 'running',
-    started_at: new Date('2026-11-15T09:30:00.000Z'),
+    pipeline_started_at: new Date('2026-11-15T08:00:00.000Z'),
+    pipeline_stage_started_at: new Date('2026-11-15T08:00:00.000Z'),
+    pipeline_heartbeat_at: new Date('2026-11-15T09:59:30.000Z'),
   }, now), 'running');
   assert.equal(getPipelineStatus({
     pipeline_status: 'running',
-    started_at: new Date('2026-11-15T08:00:00.000Z'),
+    pipeline_heartbeat_at: new Date('2026-11-15T09:40:00.000Z'),
   }, now), 'stalled');
   assert.equal(getPipelineStatus({ pipeline_status: 'failed' }, now), 'failing');
-  assert.equal(getPipelineStatus({ status: 'completed_with_errors', pipeline_status: 'completed' }, now), 'degraded');
+  assert.equal(getPipelineStatus({ pipeline_status: 'skipped' }, now), 'skipped');
+  assert.equal(getPipelineStatus({ status: 'completed_with_errors', pipeline_status: 'completed' }, now), 'healthy');
   assert.equal(getPipelineStatus({ status: 'completed', pipeline_status: 'completed' }, now), 'healthy');
 });
 
@@ -39,18 +42,25 @@ test('scheduler lease serialization does not expose its owner token', () => {
   assert.equal(serializeLease(null, now).status, 'not_found');
 });
 
-test('pipeline health reports the latest persisted run and lease', async () => {
+test('pipeline health exposes pipeline lifecycle timestamps and lease', async () => {
   const originals = {
     find: CollectionRun.find,
     findById: SchedulerLease.findById,
   };
   const latestRun = {
     _id: 'run-123',
-    status: 'completed',
+    status: 'completed_with_errors',
     pipeline_status: 'completed',
     pipeline_stage: 'completed',
-    started_at: new Date(Date.now() - 60000),
-    completed_at: new Date(),
+    pipeline_started_at: new Date(Date.now() - 120000),
+    pipeline_completed_at: new Date(),
+    pipeline_duration_ms: 120000,
+    pipeline_heartbeat_at: new Date(),
+    pipeline_stage_started_at: new Date(Date.now() - 10000),
+    pipeline_stage_completed_at: new Date(),
+    pipeline_stage_duration_ms: 10000,
+    started_at: new Date(Date.now() - 180000),
+    completed_at: new Date(Date.now() - 60000),
     duration_ms: 60000,
     source_count: 10,
     succeeded_count: 9,
@@ -78,9 +88,10 @@ test('pipeline health reports the latest persisted run and lease', async () => {
       json(body) { response = body; return this; },
       status(code) { this.statusCode = code; return this; },
     });
-    assert.equal(response.status, 'degraded');
+    assert.equal(response.status, 'healthy');
     assert.equal(response.last_run.id, 'run-123');
     assert.equal(response.last_run.failed_count, 1);
+    assert.equal(response.last_run.pipeline_duration_ms, 120000);
     assert.equal(response.scheduler_lease.is_active, true);
     assert.equal(response.recent_runs.length, 1);
   } finally {
@@ -89,22 +100,34 @@ test('pipeline health reports the latest persisted run and lease', async () => {
   }
 });
 
-test('health summary reports untracked configured sources as unknown', async () => {
+test('health summary keeps source degradation separate from pipeline execution status', async () => {
   const originals = {
     find: SourceHealth.find,
     findOne: CollectionRun.findOne,
     findById: SchedulerLease.findById,
   };
-  SourceHealth.find = () => ({ async lean() { return []; } });
+  SourceHealth.find = () => ({
+    async lean() {
+      return [{
+        source_id: 'known-source',
+        status: 'failing',
+      }];
+    },
+  });
   CollectionRun.findOne = () => ({
     sort() { return this; },
     async lean() {
       return {
-        status: 'completed',
+        status: 'completed_with_errors',
         pipeline_status: 'completed',
         pipeline_stage: 'completed',
+        pipeline_started_at: new Date(Date.now() - 120000),
+        pipeline_completed_at: new Date(),
+        pipeline_heartbeat_at: new Date(),
+        pipeline_duration_ms: 120000,
         started_at: new Date(),
         completed_at: new Date(),
+        failed_count: 1,
       };
     },
   });
@@ -121,9 +144,8 @@ test('health summary reports untracked configured sources as unknown', async () 
       status(code) { this.statusCode = code; return this; },
     });
     assert.equal(response.pipeline.status, 'healthy');
-    assert.equal(response.sources.tracked, 0);
-    assert.equal(response.sources.untracked, response.sources.configured);
-    assert.equal(response.sources.by_status.unknown, response.sources.configured);
+    assert.equal(response.pipeline.duration_ms, 120000);
+    assert.equal(response.sources.by_status.failing, 1);
     assert.equal(response.status, 'degraded');
   } finally {
     SourceHealth.find = originals.find;
