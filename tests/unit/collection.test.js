@@ -137,3 +137,33 @@ test('collector payload publisher metadata survives when it is not attached to t
   assert.deepEqual(outcome.source.source_tags, ['business']);
   assert.equal(outcome.source.source_origin, 'Ghana');
 });
+
+
+test('collection invokes each source result handler before slower sources finish', async () => {
+  const completed = [];
+  let releaseSlow;
+  const slow = new Promise((resolve) => { releaseSlow = resolve; });
+  const registry = createSourceRegistry([
+    async () => {
+      await slow;
+      return { articles: [{ title: 'Slow story' }] };
+    },
+    async () => ({ articles: [{ title: 'Fast story' }] }),
+  ]);
+
+  const collectionPromise = runCollection(registry, {
+    concurrency: 2,
+    retryAttempts: 0,
+    timeoutMs: 500,
+    onResult: async (result) => {
+      completed.push(result.sourceId);
+    },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(completed.length, 1);
+  releaseSlow();
+  const result = await collectionPromise;
+  assert.equal(result.succeededCount, 2);
+  assert.equal(completed.length, 2);
+});
