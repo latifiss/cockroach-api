@@ -25,7 +25,7 @@ Supported `source_category` values: `News`, `Politics`, `Local`, `Business & Fin
 
 In an API client's Bearer Token auth setting, enter only the token value; the client adds the `Bearer` prefix. A custom `Authorization` header may contain either `Bearer <OPS_API_TOKEN>` or the token value directly.
 
-All endpoints below require the header `Authorization: Bearer <OPS_API_TOKEN>`.
+All endpoints below require the header `Authorization: Bearer <OPS_API_TOKEN>`.\n\n- `GET /api/operations/health/summary` — high-level status for configured sources, the latest pipeline run, and the scheduler lease. Unseen configured sources count as `unknown`; the endpoint does not assume they are healthy.\n- `GET /api/operations/health/pipeline` — latest ten persisted pipeline runs, the latest stage and outcome, elapsed time, and scheduler lease state.\n
 
 - `GET /api/operations/sources` — source health. Optional `status=healthy|degraded|failing|unknown`.
 - `GET /api/operations/collections` — paginated collection-run history. Optional `page`, `limit`, and `status`.
@@ -33,7 +33,7 @@ All endpoints below require the header `Authorization: Bearer <OPS_API_TOKEN>`.
 
 ## Pipeline behavior
 
-The scheduler runs the unified collection, canonicalization, persistence and clustering pipeline every five minutes. The legacy latest and clustering job modules now re-export the unified scheduler rather than running independent collectors.
+The scheduler runs the unified collection, canonicalization, persistence and clustering pipeline every 30 minutes (UTC). The legacy latest and clustering job modules now re-export the unified scheduler rather than running independent collectors.
 
 A source failure is isolated from other publishers. Failed attempts are recorded in collection history and source health. A collection run with no successful sources does not overwrite article or cluster data. Empty successful publisher responses are valid and do not delete existing records.
 
@@ -48,3 +48,4 @@ Canonical latest articles are written with MongoDB bulk upserts keyed by canonic
 5. Verify source health and collection history using the protected operations endpoints.
 
 The initial migration intentionally retains existing article and cluster records. It does not perform destructive cleanup or rewrite legacy records.
+\n## Health status semantics\n\n- `healthy` — the latest persisted pipeline run completed and configured sources have recorded healthy status.\n- `degraded` — the latest pipeline run had source failures, source records are missing or unknown, or there is not enough persisted evidence to confirm health.\n- `failing` — the latest pipeline run failed or at least one configured source is failing.\n- `running` — the latest persisted pipeline run is currently in a pipeline stage.\n- `stalled` — a persisted run still reports `running` more than 45 minutes after its recorded start.\n- `unknown` — no persisted pipeline run is available.\n\nThe scheduler lease response exposes whether the lease is active and its timestamps; it deliberately does not expose the lease owner identifier. The existing public `/health/live` and `/health/ready` endpoints remain lightweight process and database checks and do not expose operational details.\n
