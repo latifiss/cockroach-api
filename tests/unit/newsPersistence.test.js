@@ -5,6 +5,7 @@ const {
   stableClusterId,
   createArticleSlug,
   persistNewsClusters,
+  persistNewsClustersIncremental,
 } = require('../../services/articles/newsPersistence');
 
 function article(articleId, title = 'Same story', extra = {}) {
@@ -325,4 +326,47 @@ test('aborts cluster persistence when the scheduler lease is no longer owned', a
   );
   assert.equal(writes, 0);
   assert.equal(ended, true);
+});
+
+
+test('incremental cluster persistence moves only incoming articles and preserves unrelated cluster members', async () => {
+  const existing = {
+    _id: 'old-cluster',
+    cluster_id: 'old-cluster',
+    articles: [
+      { article_id: 'article-1', title: 'Same story', relevance_score: 1 },
+      { article_id: 'article-old', title: 'Older story', relevance_score: 0.5 },
+    ],
+  };
+  const writes = [];
+  let query;
+  const model = {
+    find(value) {
+      query = value;
+      return { lean: async () => [existing] };
+    },
+    async bulkWrite(operations) {
+      writes.push(operations);
+      return {
+        upsertedCount: operations.filter((operation) => operation.updateOne.upsert).length,
+        modifiedCount: operations.length,
+      };
+    },
+    async deleteMany() {
+      return { deletedCount: 0 };
+    },
+  };
+
+  const result = await persistNewsClustersIncremental(model, [[article('article-1')]]);
+
+  assert.deepEqual(query.$or[0]['articles.article_id'].$in, ['article-1']);
+  assert.equal(query.$or.some((condition) => condition['articles.slug'] === null), false);
+  assert.equal(writes.length, 2);
+  assert.deepEqual(
+    writes[0][0].updateOne.update.$set.articles.map((item) => item.article_id),
+    ['article-old']
+  );
+  assert.equal(writes[1][0].updateOne.update.$set.articles[0].article_id, 'article-1');
+  assert.equal(result.detached, 1);
+  assert.equal(result.removed, 0);
 });
