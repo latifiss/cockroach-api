@@ -101,7 +101,7 @@ if (cluster.isPrimary) {
 
       if (process.env.SCHEDULER_WORKER === 'true') {
         intelligencePipelineJob.start();
-        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 30 });
+        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 5 });
         executePipeline().catch((error) => logger.error('Initial pipeline execution failed', { error }));
       }
     } catch (error) {
