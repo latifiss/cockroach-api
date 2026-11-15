@@ -241,6 +241,7 @@ async function collectOneSource(source) {
   if (stopped || inFlightSources.has(source.id)) return;
   inFlightSources.add(source.id);
   activePolls += 1;
+  scheduleMetricsPublish();
 
   try {
     const config = loadRuntimeConfig();
@@ -298,6 +299,7 @@ async function collectOneSource(source) {
   } finally {
     activePolls -= 1;
     inFlightSources.delete(source.id);
+    scheduleMetricsPublish();
   }
 }
 
@@ -443,7 +445,7 @@ function getSourcePollingStatus() {
 
 async function getDistributedSourcePollingStatus() {
   const lease = await SchedulerLease.findById(SOURCE_POLLING_LEASE_ID)
-    .select('owner lease_until acquired_at')
+    .select('owner lease_until acquired_at polling_metrics')
     .lean();
   const leaseActive = Boolean(lease && new Date(lease.lease_until).getTime() > Date.now());
   const isLocalOwner = leaseActive && lease.owner === sourcePollingOwner;
