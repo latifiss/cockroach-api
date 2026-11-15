@@ -63,6 +63,7 @@ async function executePipeline() {
   let leaseRenewalInFlight = null;
   let collectionRun = null;
   let currentStage = 'collection';
+  let currentStageStartedAt = startedAt;
 
   function assertLeaseOwnership() {
     if (leaseLost) {
@@ -153,6 +154,7 @@ async function executePipeline() {
     }
 
     currentStage = 'latest_persistence';
+    currentStageStartedAt = Date.now();
     assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     logger.info('💾 Latest article persistence started', { articles: collection.articles.length });
@@ -163,6 +165,7 @@ async function executePipeline() {
     });
 
     currentStage = 'clustering';
+    currentStageStartedAt = Date.now();
     await updatePipelineStage(collectionRun._id, currentStage);
     logger.info('🧠 Article clustering started', { articles: collection.articles.length });
     const articlesById = new Map();
@@ -186,6 +189,7 @@ async function executePipeline() {
     logger.info('✅ Article clustering finished', { articles: articles.length, clusters: clusters.length });
 
     currentStage = 'news_persistence';
+    currentStageStartedAt = Date.now();
     assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     const clusterPersistence = await persistNewsClusters(
@@ -205,6 +209,7 @@ async function executePipeline() {
     });
 
     currentStage = 'cache_refresh';
+    currentStageStartedAt = Date.now();
     assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
     const { updateNewsCache } = require('../controllers/news/feed.controller');
@@ -224,7 +229,7 @@ async function executePipeline() {
           pipeline_duration_ms: completedAt.getTime() - startedAt,
           pipeline_stage_completed_at: completedAt,
           pipeline_stage_duration_ms: completedAt.getTime()
-            - new Date(collectionRun.pipeline_stage_started_at || startedAt).getTime(),
+            - currentStageStartedAt,
         },
       }
     );
@@ -257,6 +262,7 @@ async function executePipeline() {
             pipeline_heartbeat_at: completedAt,
             pipeline_duration_ms: completedAt.getTime() - startedAt,
             pipeline_stage_completed_at: completedAt,
+            pipeline_stage_duration_ms: completedAt.getTime() - currentStageStartedAt,
           },
         }
       ).catch((persistenceError) => logger.error('Failed to record pipeline failure', { error: persistenceError }));
