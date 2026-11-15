@@ -32,11 +32,49 @@ let pendingArticleIds = new Set();
 let retryArticleIds = [];
 let activePolls = 0;
 let sourcePollingLeaseTimer = null;
+let metricsPublishTimer = null;
+let intelligenceStage = 'idle';
+let lastQueueTriggeredAt = null;
+let lastBatchStartedAt = null;
+let lastBatchCompletedAt = null;
+let lastBatchFailedAt = null;
+let lastBatchError = null;
 const sourcePollingTimers = new Map();
 const inFlightSources = new Set();
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function getPollingMetrics() {
+  return {
+    activePolls,
+    inFlightSources: [...inFlightSources],
+    pendingIntelligenceArticles: pendingArticleIds.size,
+    intelligenceStage,
+    lastQueueTriggeredAt,
+    lastBatchStartedAt,
+    lastBatchCompletedAt,
+    lastBatchFailedAt,
+    lastBatchError,
+    metricsUpdatedAt: new Date(),
+  };
+}
+
+function scheduleMetricsPublish() {
+  if (metricsPublishTimer || stopped || !started) return;
+  metricsPublishTimer = setTimeout(async () => {
+    metricsPublishTimer = null;
+    try {
+      await SchedulerLease.updateOne(
+        { _id: SOURCE_POLLING_LEASE_ID, owner: sourcePollingOwner, lease_until: { $gt: new Date() } },
+        { $set: { polling_metrics: getPollingMetrics() } }
+      );
+    } catch (error) {
+      logger.error('Source polling metrics publish failed', { error });
+    }
+  }, 250);
+  metricsPublishTimer.unref?.();
 }
 
 function sourceOutcome(source, result) {
@@ -72,6 +110,14 @@ async function persistSourceHealth(source, result, newArticleCount = 0) {
 
 function scheduleIntelligence(articleIds) {
   for (const id of articleIds) pendingArticleIds.add(id);
+  if (articleIds.length) {
+    lastQueueTriggeredAt = new Date();
+    logger.info('🧠 Intelligence articles queued', {
+      added: articleIds.length,
+      pending: pendingArticleIds.size,
+    });
+    scheduleMetricsPublish();
+  }
   if (intelligenceTimer || stopped) return;
   intelligenceTimer = setTimeout(() => {
     intelligenceTimer = null;
@@ -80,7 +126,14 @@ function scheduleIntelligence(articleIds) {
       .catch((error) => {
         for (const id of retryArticleIds) pendingArticleIds.add(id);
         retryArticleIds = [];
-        logger.error('Incremental intelligence processing failed; articles returned to the queue', { error });
+        intelligenceStage = 'error';
+        lastBatchFailedAt = new Date();
+        lastBatchError = error.message;
+        scheduleMetricsPublish();
+        logger.error('Incremental intelligence processing failed; articles returned to the queue', {
+          error,
+          requeued: pendingArticleIds.size,
+        });
         if (!stopped && pendingArticleIds.size) {
           setTimeout(() => scheduleIntelligence([]), 30000).unref?.();
         }
@@ -93,6 +146,15 @@ async function processIntelligenceQueue() {
   const queuedIds = [...pendingArticleIds];
   retryArticleIds = queuedIds;
   pendingArticleIds.clear();
+  intelligenceStage = 'loading_articles';
+  lastBatchStartedAt = new Date();
+  lastBatchError = null;
+  logger.info('🧠 Incremental intelligence batch started', {
+    queuedArticles: queuedIds.length,
+    pendingAfterDequeue: pendingArticleIds.size,
+    lookbackHours: INTELLIGENCE_LOOKBACK_HOURS,
+  });
+  scheduleMetricsPublish();
   const cutoff = new Date(Date.now() - INTELLIGENCE_LOOKBACK_HOURS * 60 * 60 * 1000);
   const [queuedArticles, recentArticles] = await Promise.all([
     Latest.find({ article_id: { $in: queuedIds } }).lean(),
@@ -120,21 +182,47 @@ async function processIntelligenceQueue() {
   }
 
   const articles = [...articlesById.values()];
+  logger.info('📥 Intelligence articles loaded', {
+    queuedArticles: queuedIds.length,
+    queuedFound: queuedArticles.length,
+    recentFound: recentArticles.length,
+    candidates: articles.length,
+  });
+  scheduleMetricsPublish();
+
   if (!articles.length) {
     retryArticleIds = [];
+    intelligenceStage = 'idle';
+    lastBatchCompletedAt = new Date();
+    logger.warn('⚠️ Intelligence batch contained no usable articles', { queuedArticles: queuedIds.length });
+    scheduleMetricsPublish();
     return;
   }
 
-  logger.info('Incremental intelligence batch started', {
-    queuedArticles: queuedIds.length,
-    candidateArticles: articles.length,
-    lookbackHours: INTELLIGENCE_LOOKBACK_HOURS,
-  });
-
+  intelligenceStage = 'clustering';
+  logger.info('🧩 News clustering started', { articles: articles.length });
+  scheduleMetricsPublish();
   const clusters = await clusterNewsArticles(articles, 0.7);
+  logger.info('🧩 News clustering completed', { articles: articles.length, clusters: clusters.length });
+  intelligenceStage = 'persisting_clusters';
+  logger.info('💾 Incremental news cluster persistence started', { clusters: clusters.length });
+  scheduleMetricsPublish();
   const persistence = await persistNewsClustersIncremental(News, clusters, { logger });
+  logger.info('💾 Incremental news cluster persistence completed', {
+    attempted: persistence.attempted,
+    inserted: persistence.inserted,
+    updated: persistence.updated,
+    detached: persistence.detached,
+    removed: persistence.removed,
+  });
   retryArticleIds = [];
+  intelligenceStage = 'refreshing_cache';
+  scheduleMetricsPublish();
   await updateNewsCache().catch((error) => logger.error('Incremental news cache refresh failed; API workers will refresh on demand', { error }));
+
+  intelligenceStage = 'idle';
+  lastBatchCompletedAt = new Date();
+  scheduleMetricsPublish();
 
   logger.info('Incremental intelligence batch completed', {
     queuedArticles: queuedIds.length,
@@ -303,6 +391,7 @@ async function startSourcePolling() {
     concurrency: 'all registered sources',
     leaseOwner: sourcePollingOwner,
   });
+  scheduleMetricsPublish();
   for (const source of sourceRegistry) {
     collectOneSource(source).catch((error) => {
       logger.error('Initial publisher collection failed', { source: source.name, error });
@@ -363,7 +452,16 @@ async function getDistributedSourcePollingStatus() {
     started: leaseActive,
     activePolls: isLocalOwner ? activePolls : null,
     inFlightSources: isLocalOwner ? [...inFlightSources] : null,
-    pendingIntelligenceArticles: isLocalOwner ? pendingArticleIds.size : null,
+    pendingIntelligenceArticles: isLocalOwner ? pendingArticleIds.size : (lease?.polling_metrics?.pendingIntelligenceArticles ?? null),
+    activePolls: isLocalOwner ? activePolls : (lease?.polling_metrics?.activePolls ?? null),
+    inFlightSources: isLocalOwner ? [...inFlightSources] : (lease?.polling_metrics?.inFlightSources ?? null),
+    intelligenceStage: lease?.polling_metrics?.intelligenceStage ?? (isLocalOwner ? intelligenceStage : null),
+    lastQueueTriggeredAt: lease?.polling_metrics?.lastQueueTriggeredAt ?? null,
+    lastBatchStartedAt: lease?.polling_metrics?.lastBatchStartedAt ?? null,
+    lastBatchCompletedAt: lease?.polling_metrics?.lastBatchCompletedAt ?? null,
+    lastBatchFailedAt: lease?.polling_metrics?.lastBatchFailedAt ?? null,
+    lastBatchError: lease?.polling_metrics?.lastBatchError ?? null,
+    metricsUpdatedAt: lease?.polling_metrics?.metricsUpdatedAt ?? null,
     leaseActive,
     leaseUntil: lease?.lease_until || null,
     owner: leaseActive ? lease.owner : null,
