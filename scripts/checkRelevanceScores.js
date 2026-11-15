@@ -51,7 +51,7 @@ async function run() {
     const db = mongoose.connection.db;
     const latestCollection = db.collection('latests');
 
-    const [latestArticles, embeddedArticles, newsClusters, embeddedSamples, latestSamples] = await Promise.all([
+    const [latestArticles, embeddedArticles, newsClusters, embeddedScoreCoverage, embeddedSamples, latestSamples] = await Promise.all([
       latestCollection.aggregate([
         {
           $group: {
@@ -97,6 +97,50 @@ async function run() {
             aboveOne: { $sum: { $cond: [{ $gt: ['$average_relevance', 1] }, 1, 0] } }
           }
         }
+      ]).next(),
+
+      db.collection('news').aggregate([
+        { $unwind: '$articles' },
+        { $match: { $expr: { $eq: [{ $type: '$articles.relevance_score' }, 'missing'] } } },
+        {
+          $lookup: {
+            from: 'latests',
+            localField: 'articles.article_id',
+            foreignField: 'article_id',
+            as: 'latestMatch',
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            missingEmbeddedTotal: { $sum: 1 },
+            matchingLatest: { $sum: { $cond: [{ $gt: [{ $size: '$latestMatch' }, 0] }, 1, 0] } },
+            matchingLatestScored: {
+              $sum: {
+                $cond: [
+                  { $isNumber: { $arrayElemAt: ['$latestMatch.relevance_score', 0] } },
+                  1,
+                  0,
+                ],
+              },
+            },
+            matchingLatestMissingScore: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: [{ $size: '$latestMatch' }, 0] },
+                      { $eq: [{ $type: { $arrayElemAt: ['$latestMatch.relevance_score', 0] } }, 'missing'] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            noLatestMatch: { $sum: { $cond: [{ $eq: [{ $size: '$latestMatch' }, 0] }, 1, 0] } },
+          },
+        },
       ]).next(),
 
       db.collection('news').aggregate([
@@ -170,6 +214,7 @@ async function run() {
       database: 'api',
       latestArticles: latestArticles || { total: 0 },
       embeddedArticles: embeddedArticles || { total: 0 },
+      embeddedScoreCoverage: embeddedScoreCoverage || { missingEmbeddedTotal: 0 },
       newsClusters: newsClusters || { total: 0 },
       rescoredLatestSample: summarizeScores(rescored),
       rescoredSampleSize: latestSamples.length,

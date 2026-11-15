@@ -5,11 +5,11 @@ const { createLogger } = require('../../utils/logger');
 
 const logger = createLogger();
 const CACHE_TTL_MS = 15 * 60 * 1000;
+let cacheRefreshPromise = null;
 let cachedNews = {
   clusters: [],
   lastUpdated: new Date(0),
   expiration: CACHE_TTL_MS,
-  isUpdating: false,
 };
 
 function cleanText(text) {
@@ -22,26 +22,34 @@ function generateClusterId(cluster) {
 }
 
 async function updateNewsCache() {
-  if (cachedNews.isUpdating) return;
-  cachedNews.isUpdating = true;
-  try {
-    const storedClusters = await News.find()
-      .sort({ average_relevance: -1, updatedAt: -1 })
-      .allowDiskUse(true)
-      .lean();
-    const clusters = storedClusters.map((cluster) => cluster.articles || []);
-    cachedNews = {
-      clusters,
-      lastUpdated: new Date(),
-      expiration: CACHE_TTL_MS,
-      isUpdating: false,
-    };
-    return cachedNews;
-  } catch (error) {
-    cachedNews.isUpdating = false;
-    logger.error('Persisted news feed cache refresh failed; retaining previous cache', { error });
-    throw error;
-  }
+  if (cacheRefreshPromise) return cacheRefreshPromise;
+
+  cacheRefreshPromise = (async () => {
+    try {
+      const storedClusters = await News.find()
+        .sort({ average_relevance: -1, updatedAt: -1 })
+        .allowDiskUse(true)
+        .lean();
+      const clusters = storedClusters.map((cluster) => cluster.articles || []);
+      cachedNews = {
+        clusters,
+        lastUpdated: new Date(),
+        expiration: CACHE_TTL_MS,
+      };
+      logger.info('Persisted news feed cache refreshed', {
+        clusters: clusters.length,
+        articles: clusters.reduce((sum, cluster) => sum + cluster.length, 0),
+      });
+      return cachedNews;
+    } catch (error) {
+      logger.error('Persisted news feed cache refresh failed; retaining previous cache', { error });
+      throw error;
+    } finally {
+      cacheRefreshPromise = null;
+    }
+  })();
+
+  return cacheRefreshPromise;
 }
 
 function mergeClusters(newClusters, oldClusters) {

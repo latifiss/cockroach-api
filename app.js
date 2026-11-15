@@ -95,11 +95,14 @@ if (cluster.isPrimary) {
     logger.info('API worker listening', { pid: process.pid, port: config.port, workerId: cluster.worker.id });
     try {
       await connectDB();
+      await updateNewsCache()
+        .then(() => logger.info('News feed cache initialized', { workerId: cluster.worker.id }))
+        .catch((error) => logger.error('Initial news feed cache refresh failed; requests will retry', { error, workerId: cluster.worker.id }));
+
       if (process.env.SCHEDULER_WORKER === 'true') {
         intelligencePipelineJob.start();
-        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 2 });
+        logger.info('Intelligence pipeline scheduler started', { workerId: cluster.worker.id, intervalMinutes: 30 });
         executePipeline().catch((error) => logger.error('Initial pipeline execution failed', { error }));
-        updateNewsCache().catch((error) => logger.error('Initial news cache refresh failed', { error }));
       }
     } catch (error) {
       logger.error('Worker initialization failed', { error });
