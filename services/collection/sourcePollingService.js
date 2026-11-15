@@ -142,15 +142,16 @@ async function processIntelligenceQueue() {
 async function collectOneSource(source) {
   if (stopped) return;
   activePolls += 1;
-  const config = loadRuntimeConfig();
-  const result = await executeSource(source, {
-    timeoutMs: config.collectionTimeoutMs,
-    retryAttempts: config.collectionRetryAttempts,
-    retryDelayMs: config.collectionRetryDelayMs,
-  });
 
-  let newArticleCount = 0;
   try {
+    const config = loadRuntimeConfig();
+    const result = await executeSource(source, {
+      timeoutMs: config.collectionTimeoutMs,
+      retryAttempts: config.collectionRetryAttempts,
+      retryDelayMs: config.collectionRetryDelayMs,
+    });
+
+    let newArticleCount = 0;
     if (result.status === 'succeeded') {
       const normalized = deduplicateCanonicalArticles(
         result.articles
@@ -179,12 +180,17 @@ async function collectOneSource(source) {
         durationMs: result.durationMs,
       });
     }
+
     await persistSourceHealth(source, result, newArticleCount);
   } catch (error) {
-    logger.error('Publisher result processing failed', { source: source.name, error });
+    logger.error('Publisher collection or processing failed', { source: source.name, error });
     const failedResult = {
-      ...result,
+      sourceId: source.id,
+      sourceName: source.name,
       status: 'failed',
+      completedAt: new Date(),
+      durationMs: null,
+      articleCount: 0,
       error: { code: error.code || 'SOURCE_PROCESSING_FAILED', message: error.message },
     };
     await persistSourceHealth(source, failedResult, 0).catch((healthError) => {
