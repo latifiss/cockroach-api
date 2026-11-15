@@ -32,6 +32,8 @@ let pendingArticleIds = new Set();
 let retryArticleIds = [];
 let activePolls = 0;
 let sourcePollingLeaseTimer = null;
+const sourcePollingTimers = new Map();
+const inFlightSources = new Set();
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -147,7 +149,8 @@ async function processIntelligenceQueue() {
 }
 
 async function collectOneSource(source) {
-  if (stopped) return;
+  if (stopped || inFlightSources.has(source.id)) return;
+  inFlightSources.add(source.id);
   activePolls += 1;
 
   try {
@@ -205,11 +208,7 @@ async function collectOneSource(source) {
     });
   } finally {
     activePolls -= 1;
-    if (!stopped) {
-      setTimeout(() => collectOneSource(source).catch((error) => {
-        logger.error('Publisher polling loop crashed', { source: source.name, error });
-      }), POLL_INTERVAL_MS).unref?.();
-    }
+    inFlightSources.delete(source.id);
   }
 }
 
@@ -266,10 +265,16 @@ async function startSourcePolling() {
       .then((renewed) => {
         if (renewed) return;
         stopped = true;
+        for (const timer of sourcePollingTimers.values()) clearInterval(timer);
+        sourcePollingTimers.clear();
+        if (sourcePollingLeaseTimer) clearInterval(sourcePollingLeaseTimer);
         logger.error('Source polling lease was lost; this instance will stop scheduling publisher polls');
       })
       .catch((error) => {
         stopped = true;
+        for (const timer of sourcePollingTimers.values()) clearInterval(timer);
+        sourcePollingTimers.clear();
+        if (sourcePollingLeaseTimer) clearInterval(sourcePollingLeaseTimer);
         logger.error('Source polling lease renewal failed; this instance will stop scheduling publisher polls', { error });
       });
   }, SOURCE_POLLING_LEASE_RENEWAL_MS);
@@ -285,6 +290,17 @@ async function startSourcePolling() {
     collectOneSource(source).catch((error) => {
       logger.error('Initial publisher collection failed', { source: source.name, error });
     });
+    const timer = setInterval(() => {
+      if (inFlightSources.has(source.id)) {
+        logger.warn('Publisher poll skipped because its previous request is still running', { source: source.name });
+        return;
+      }
+      collectOneSource(source).catch((error) => {
+        logger.error('Scheduled publisher collection failed', { source: source.name, error });
+      });
+    }, POLL_INTERVAL_MS);
+    timer.unref();
+    sourcePollingTimers.set(source.id, timer);
   }
   return true;
 }
@@ -293,6 +309,8 @@ async function stopSourcePolling() {
   stopped = true;
   if (sourcePollingLeaseTimer) clearInterval(sourcePollingLeaseTimer);
   sourcePollingLeaseTimer = null;
+  for (const timer of sourcePollingTimers.values()) clearInterval(timer);
+  sourcePollingTimers.clear();
   if (intelligenceTimer) clearTimeout(intelligenceTimer);
   await intelligenceQueue;
   while (activePolls > 0) await wait(100);
@@ -309,6 +327,7 @@ function getSourcePollingStatus() {
     stopped,
     sourceCount: sourceRegistry.length,
     activePolls,
+    inFlightSources: [...inFlightSources],
     pendingIntelligenceArticles: pendingArticleIds.size,
     pollIntervalMs: POLL_INTERVAL_MS,
   };
