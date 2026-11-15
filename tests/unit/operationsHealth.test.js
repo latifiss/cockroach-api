@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const CollectionRun = require('../../models/collectionRun.model');
 const SourceHealth = require('../../models/sourceHealth.model');
 const SchedulerLease = require('../../models/schedulerLease.model');
+const { sourceRegistry } = require('../../services/collection');
 const {
   getHealthSummary,
   getPipelineHealth,
@@ -109,7 +110,7 @@ test('health summary keeps source degradation separate from pipeline execution s
   SourceHealth.find = () => ({
     async lean() {
       return [{
-        source_id: 'known-source',
+        source_id: sourceRegistry[0].id,
         status: 'failing',
       }];
     },
