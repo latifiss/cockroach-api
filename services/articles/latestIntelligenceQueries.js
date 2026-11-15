@@ -1,9 +1,11 @@
+const { withMongoPersistence } = require('../../utils/mongoPersistenceLimiter');
+
 async function runLatestQuery(logger, queryName, requestedItems, execute) {
   const startedAt = Date.now();
   logger.info('🔎 Latest query started', { query: queryName, requestedItems });
 
   try {
-    const articles = await execute();
+    const articles = await withMongoPersistence(execute);
     logger.info('✅ Latest query completed', {
       query: queryName,
       durationMs: Date.now() - startedAt,
