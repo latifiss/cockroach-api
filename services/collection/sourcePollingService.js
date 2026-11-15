@@ -23,6 +23,7 @@ let stopped = false;
 let intelligenceTimer = null;
 let intelligenceQueue = Promise.resolve();
 let pendingArticleIds = new Set();
+let retryArticleIds = [];
 let activePolls = 0;
 
 function wait(milliseconds) {
@@ -67,13 +68,21 @@ function scheduleIntelligence(articleIds) {
     intelligenceTimer = null;
     intelligenceQueue = intelligenceQueue
       .then(processIntelligenceQueue)
-      .catch((error) => logger.error('Incremental intelligence processing failed', { error }));
+      .catch((error) => {
+        for (const id of retryArticleIds) pendingArticleIds.add(id);
+        retryArticleIds = [];
+        logger.error('Incremental intelligence processing failed; articles returned to the queue', { error });
+        if (!stopped && pendingArticleIds.size) {
+          setTimeout(() => scheduleIntelligence([]), 30000).unref?.();
+        }
+      });
   }, INTELLIGENCE_DEBOUNCE_MS);
 }
 
 async function processIntelligenceQueue() {
   if (stopped || pendingArticleIds.size === 0) return;
   const queuedIds = [...pendingArticleIds];
+  retryArticleIds = queuedIds;
   pendingArticleIds.clear();
   const cutoff = new Date(Date.now() - INTELLIGENCE_LOOKBACK_HOURS * 60 * 60 * 1000);
   const recentArticles = await Latest.find({
@@ -101,7 +110,10 @@ async function processIntelligenceQueue() {
   }
 
   const articles = [...articlesById.values()];
-  if (!articles.length) return;
+  if (!articles.length) {
+    retryArticleIds = [];
+    return;
+  }
 
   logger.info('Incremental intelligence batch started', {
     queuedArticles: queuedIds.length,
@@ -111,7 +123,8 @@ async function processIntelligenceQueue() {
 
   const clusters = await clusterNewsArticles(articles, 0.7);
   const persistence = await persistNewsClustersIncremental(News, clusters, { logger });
-  await updateNewsCache();
+  retryArticleIds = [];
+  await updateNewsCache().catch((error) => logger.error('Incremental news cache refresh failed; API workers will refresh on demand', { error }));
 
   logger.info('Incremental intelligence batch completed', {
     queuedArticles: queuedIds.length,
