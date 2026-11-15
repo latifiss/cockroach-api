@@ -14,10 +14,12 @@ const { loadRuntimeConfig } = require('../../config/runtime');
 const { createLogger } = require('../../utils/logger');
 const { randomUUID } = require('crypto');
 const SchedulerLease = require('../../models/schedulerLease.model');
+const { withMongoPersistence, getMongoPersistenceStatus } = require('../../utils/mongoPersistenceLimiter');
 const {
   findQueuedAndRecentArticles,
   findRecentlyIngestedArticles,
 } = require('../articles/latestIntelligenceQueries');
+const { createIntelligenceArticleQueue } = require('./intelligenceArticleQueue');
 
 const logger = createLogger();
 const POLL_INTERVAL_MS = Math.max(30000, Number.parseInt(process.env.SOURCE_POLL_INTERVAL_MS, 10) || 5 * 60 * 1000);
@@ -32,7 +34,7 @@ let started = false;
 let stopped = false;
 let intelligenceTimer = null;
 let intelligenceQueue = Promise.resolve();
-let pendingArticleIds = new Set();
+const pendingArticleIds = createIntelligenceArticleQueue();
 let retryArticleIds = [];
 let activePolls = 0;
 let recoveryRetryTimer = null;
@@ -56,6 +58,7 @@ function getPollingMetrics() {
     activePolls,
     inFlightSources: [...inFlightSources],
     pendingIntelligenceArticles: pendingArticleIds.size,
+    mongoPersistence: getMongoPersistenceStatus(),
     intelligenceStage,
     lastQueueTriggeredAt,
     lastBatchStartedAt,
@@ -97,28 +100,30 @@ function sourceOutcome(source, result) {
 }
 
 async function persistSourceHealth(source, result, newArticleCount = 0) {
-  const previous = await SourceHealth.findOne({ source_id: source.id }).lean();
-  const health = transitionSourceHealth(previous || {}, sourceOutcome(source, result), source.name);
-  await SourceHealth.updateOne(
-    { source_id: source.id },
-    {
-      $set: {
-        ...health,
-        last_new_article_count: newArticleCount,
-        poll_interval_ms: POLL_INTERVAL_MS,
-        next_fetch_at: new Date(Date.now() + POLL_INTERVAL_MS),
+  return withMongoPersistence(async () => {
+    const previous = await SourceHealth.findOne({ source_id: source.id }).lean();
+    const health = transitionSourceHealth(previous || {}, sourceOutcome(source, result), source.name);
+    await SourceHealth.updateOne(
+      { source_id: source.id },
+      {
+        $set: {
+          ...health,
+          last_new_article_count: newArticleCount,
+          poll_interval_ms: POLL_INTERVAL_MS,
+          next_fetch_at: new Date(Date.now() + POLL_INTERVAL_MS),
+        },
       },
-    },
-    { upsert: true }
-  );
+      { upsert: true }
+    );
+  });
 }
 
 function scheduleIntelligence(articleIds) {
-  for (const id of articleIds) pendingArticleIds.add(id);
-  if (articleIds.length) {
+  const added = pendingArticleIds.add(articleIds);
+  if (added) {
     lastQueueTriggeredAt = new Date();
     logger.info('🧠 Intelligence articles queued', {
-      added: articleIds.length,
+      added,
       pending: pendingArticleIds.size,
     });
     scheduleMetricsPublish();
@@ -129,7 +134,7 @@ function scheduleIntelligence(articleIds) {
     intelligenceQueue = intelligenceQueue
       .then(processIntelligenceQueue)
       .catch((error) => {
-        for (const id of retryArticleIds) pendingArticleIds.add(id);
+        pendingArticleIds.add(retryArticleIds);
         retryArticleIds = [];
         intelligenceStage = 'error';
         lastBatchFailedAt = new Date();
@@ -148,9 +153,8 @@ function scheduleIntelligence(articleIds) {
 
 async function processIntelligenceQueue() {
   if (stopped || pendingArticleIds.size === 0) return;
-  const queuedIds = [...pendingArticleIds];
+  const queuedIds = pendingArticleIds.take();
   retryArticleIds = queuedIds;
-  pendingArticleIds.clear();
   intelligenceStage = 'loading_articles';
   lastBatchStartedAt = new Date();
   lastBatchError = null;
@@ -262,8 +266,8 @@ async function collectOneSource(source) {
       const scored = scoreArticlesRelevance(normalized);
       const persistence = await persistLatestArticles(scored, { batchSize: 100 });
       newArticleCount = persistence.upserted;
-      if (persistence.upserted > 0 || persistence.modified > 0) {
-        scheduleIntelligence(scored.map((article) => article.article_id));
+      if (persistence.intelligenceArticleIds.length) {
+        scheduleIntelligence(persistence.intelligenceArticleIds);
       }
       logger.info('Publisher collection completed', {
         source: source.name,
@@ -271,6 +275,9 @@ async function collectOneSource(source) {
         fetched: result.articleCount,
         newArticles: newArticleCount,
         updatedArticles: persistence.modified,
+        materiallyChangedArticles: persistence.materiallyChangedArticleIds.length,
+        metadataUpdatedArticles: persistence.metadataUpdated,
+        unchangedArticles: persistence.unchanged,
         durationMs: result.durationMs,
       });
     } else {
@@ -446,6 +453,7 @@ function getSourcePollingStatus() {
     activePolls,
     inFlightSources: [...inFlightSources],
     pendingIntelligenceArticles: pendingArticleIds.size,
+    mongoPersistence: getMongoPersistenceStatus(),
     pollIntervalMs: POLL_INTERVAL_MS,
   };
 }
@@ -463,6 +471,7 @@ async function getDistributedSourcePollingStatus() {
     activePolls: isLocalOwner ? activePolls : null,
     inFlightSources: isLocalOwner ? [...inFlightSources] : null,
     pendingIntelligenceArticles: isLocalOwner ? pendingArticleIds.size : (lease?.polling_metrics?.pendingIntelligenceArticles ?? null),
+    mongoPersistence: isLocalOwner ? getMongoPersistenceStatus() : (lease?.polling_metrics?.mongoPersistence ?? null),
     activePolls: isLocalOwner ? activePolls : (lease?.polling_metrics?.activePolls ?? null),
     inFlightSources: isLocalOwner ? [...inFlightSources] : (lease?.polling_metrics?.inFlightSources ?? null),
     intelligenceStage: lease?.polling_metrics?.intelligenceStage ?? (isLocalOwner ? intelligenceStage : null),
