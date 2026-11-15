@@ -5,6 +5,7 @@ const { createLogger } = require('../../utils/logger');
 
 const logger = createLogger();
 const CACHE_TTL_MS = 15 * 60 * 1000;
+const CACHE_REFRESH_MAX_TIME_MS = Math.max(1000, Number.parseInt(process.env.CACHE_REFRESH_MAX_TIME_MS, 10) || 4 * 60 * 1000);
 let cacheRefreshPromise = null;
 let cachedNews = {
   clusters: [],
@@ -28,6 +29,7 @@ async function updateNewsCache() {
     try {
       const storedClusters = await News.find()
         .sort({ average_relevance: -1, updatedAt: -1 })
+        .maxTimeMS(CACHE_REFRESH_MAX_TIME_MS)
         .allowDiskUse(true)
         .lean();
       const clusters = storedClusters.map((cluster) => cluster.articles || []);
@@ -42,7 +44,10 @@ async function updateNewsCache() {
       });
       return cachedNews;
     } catch (error) {
-      logger.error('Persisted news feed cache refresh failed; retaining previous cache', { error });
+      logger.error('Persisted news feed cache refresh failed; retaining previous cache', {
+        maxTimeMs: CACHE_REFRESH_MAX_TIME_MS,
+        error,
+      });
       throw error;
     } finally {
       cacheRefreshPromise = null;
