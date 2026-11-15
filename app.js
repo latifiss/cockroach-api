@@ -98,8 +98,12 @@ if (cluster.isPrimary) {
     try {
       await connectDB();
       if (process.env.SCHEDULER_WORKER === 'true') {
-        startSourcePolling();
-        logger.info('Continuous source ingestion started', { workerId: cluster.worker.id });
+        const sourcePollingStarted = await startSourcePolling();
+        if (sourcePollingStarted) {
+          logger.info('Continuous source ingestion started', { workerId: cluster.worker.id });
+        } else {
+          logger.warn('Continuous source ingestion was not started because another application instance owns the polling lease');
+        }
       }
     } catch (error) {
       logger.error('Worker initialization failed', { error });
