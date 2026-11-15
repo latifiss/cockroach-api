@@ -10,8 +10,8 @@ function readPositiveInteger(value, fallback, name) {
 function getMongoConnectionOptions(env = process.env) {
   const isSchedulerWorker = env.SCHEDULER_WORKER === 'true';
   const maxPoolSize = isSchedulerWorker
-    ? readPositiveInteger(env.MONGODB_SCHEDULER_MAX_POOL_SIZE, 10, 'MONGODB_SCHEDULER_MAX_POOL_SIZE')
-    : readPositiveInteger(env.MONGODB_API_MAX_POOL_SIZE, 5, 'MONGODB_API_MAX_POOL_SIZE');
+    ? readPositiveInteger(env.MONGODB_SCHEDULER_MAX_POOL_SIZE, 6, 'MONGODB_SCHEDULER_MAX_POOL_SIZE')
+    : readPositiveInteger(env.MONGODB_API_MAX_POOL_SIZE, 3, 'MONGODB_API_MAX_POOL_SIZE');
 
   return {
     dbName: env.MONGODB_DB_NAME || 'api',
@@ -20,11 +20,11 @@ function getMongoConnectionOptions(env = process.env) {
     maxPoolSize,
     minPoolSize: 0,
     maxConnecting: 2,
-    waitQueueTimeoutMS: 10000,
+    waitQueueTimeoutMS: 15000,
     monitorCommands: true,
     retryWrites: true,
     retryReads: true,
-    autoIndex: isSchedulerWorker,
+    autoIndex: false,
   };
 }
 
