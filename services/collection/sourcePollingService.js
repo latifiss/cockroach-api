@@ -94,18 +94,19 @@ async function processIntelligenceQueue() {
   retryArticleIds = queuedIds;
   pendingArticleIds.clear();
   const cutoff = new Date(Date.now() - INTELLIGENCE_LOOKBACK_HOURS * 60 * 60 * 1000);
-  const recentArticles = await Latest.find({
-    $or: [
-      { article_id: { $in: queuedIds } },
-      { published_at: { $gte: cutoff } },
-    ],
-  })
-    .sort({ published_at: -1 })
-    .limit(INTELLIGENCE_ARTICLE_LIMIT)
-    .lean();
+  const [queuedArticles, recentArticles] = await Promise.all([
+    Latest.find({ article_id: { $in: queuedIds } }).lean(),
+    Latest.find({
+      published_at: { $gte: cutoff },
+      article_id: { $nin: queuedIds },
+    })
+      .sort({ published_at: -1 })
+      .limit(INTELLIGENCE_ARTICLE_LIMIT)
+      .lean(),
+  ]);
 
   const articlesById = new Map();
-  for (const article of recentArticles) {
+  for (const article of [...queuedArticles, ...recentArticles]) {
     if (!article?.article_id || !article?.title) continue;
     articlesById.set(String(article.article_id), {
       ...article,
