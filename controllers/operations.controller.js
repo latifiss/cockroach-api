@@ -5,7 +5,7 @@ const { resolveSourceName } = require('../services/collection/sourceRegistry');
 const { sourceRegistry } = require('../services/collection');
 
 const PIPELINE_LEASE_ID = 'news-intelligence-pipeline';
-const PIPELINE_STALE_AFTER_MS = 45 * 60 * 1000;
+const PIPELINE_STALE_AFTER_MS = Math.max(60 * 1000, Number.parseInt(process.env.PIPELINE_STALE_AFTER_MS, 10) || 10 * 60 * 1000);
 const configuredSourceNames = new Map(sourceRegistry.map(({ id, name }) => [id, name]));
 const configuredSourceDomains = new Map(sourceRegistry.map(({ id, domain_url }) => [id, domain_url]));
 const configuredSourceCategories = new Map(sourceRegistry.map(({ id, source_category }) => [id, source_category]));
@@ -24,11 +24,15 @@ function authorizeOperations(req, res, next) {
 function getPipelineStatus(run, now = new Date()) {
   if (!run) return 'unknown';
   if (run.pipeline_status === 'running') {
-    const startedAt = run.started_at ? new Date(run.started_at).getTime() : 0;
+    const stageStartedAt = run.pipeline_stage_started_at
+      || run.pipeline_heartbeat_at
+      || run.pipeline_started_at
+      || run.started_at;
+    const startedAt = stageStartedAt ? new Date(stageStartedAt).getTime() : 0;
     return startedAt && now.getTime() - startedAt > PIPELINE_STALE_AFTER_MS ? 'stalled' : 'running';
   }
-  if (run.pipeline_status === 'failed' || run.status === 'failed') return 'failing';
-  if (run.status === 'completed_with_errors' || run.failed_count > 0) return 'degraded';
+  if (run.pipeline_status === 'failed' || run.status === 'failed' && !run.pipeline_status) return 'failing';
+  if (run.pipeline_status === 'skipped') return 'skipped';
   if (run.pipeline_status === 'completed') return 'healthy';
   return 'unknown';
 }
@@ -45,6 +49,37 @@ function serializeLease(lease, now = new Date()) {
   };
 }
 
+function serializePipelineRun(run, now) {
+  const pipelineStartedAt = run.pipeline_started_at || run.started_at || null;
+  const pipelineCompletedAt = run.pipeline_completed_at
+    || (run.pipeline_status === 'completed' || run.pipeline_status === 'skipped' ? run.completed_at : null);
+  const stageStartedAt = run.pipeline_stage_started_at || null;
+  const stageAgeMs = stageStartedAt ? Math.max(0, now.getTime() - new Date(stageStartedAt).getTime()) : null;
+
+  return {
+    id: run._id,
+    status: run.status,
+    pipeline_status: run.pipeline_status || 'pending',
+    pipeline_stage: run.pipeline_stage || null,
+    pipeline_error: run.pipeline_error || null,
+    pipeline_started_at: pipelineStartedAt,
+    pipeline_completed_at: pipelineCompletedAt,
+    pipeline_duration_ms: run.pipeline_duration_ms ?? null,
+    pipeline_heartbeat_at: run.pipeline_heartbeat_at || null,
+    pipeline_stage_started_at: stageStartedAt,
+    pipeline_stage_completed_at: run.pipeline_stage_completed_at || null,
+    pipeline_stage_duration_ms: run.pipeline_stage_duration_ms ?? null,
+    stage_age_ms: stageAgeMs,
+    started_at: run.started_at,
+    completed_at: run.completed_at,
+    duration_ms: run.duration_ms,
+    source_count: run.source_count || 0,
+    succeeded_count: run.succeeded_count || 0,
+    failed_count: run.failed_count || 0,
+    article_count: run.article_count || 0,
+  };
+}
+
 async function getPipelineHealth(req, res) {
   try {
     const now = new Date();
@@ -54,42 +89,14 @@ async function getPipelineHealth(req, res) {
     ]);
     const latestRun = runs[0] || null;
     const status = getPipelineStatus(latestRun, now);
-    const startedAt = latestRun?.started_at ? new Date(latestRun.started_at) : null;
-    const ageMs = startedAt ? Math.max(0, now.getTime() - startedAt.getTime()) : null;
 
     return res.json({
       status,
       checked_at: now,
       stale_after_ms: PIPELINE_STALE_AFTER_MS,
-      last_run: latestRun ? {
-        id: latestRun._id,
-        status: latestRun.status,
-        pipeline_status: latestRun.pipeline_status || 'pending',
-        pipeline_stage: latestRun.pipeline_stage || null,
-        pipeline_error: latestRun.pipeline_error || null,
-        started_at: latestRun.started_at,
-        completed_at: latestRun.completed_at,
-        duration_ms: latestRun.duration_ms,
-        age_ms: ageMs,
-        source_count: latestRun.source_count || 0,
-        succeeded_count: latestRun.succeeded_count || 0,
-        failed_count: latestRun.failed_count || 0,
-        article_count: latestRun.article_count || 0,
-      } : null,
+      last_run: latestRun ? serializePipelineRun(latestRun, now) : null,
       scheduler_lease: serializeLease(lease, now),
-      recent_runs: runs.map((run) => ({
-        id: run._id,
-        status: run.status,
-        pipeline_status: run.pipeline_status || 'pending',
-        pipeline_stage: run.pipeline_stage || null,
-        started_at: run.started_at,
-        completed_at: run.completed_at,
-        duration_ms: run.duration_ms,
-        source_count: run.source_count || 0,
-        succeeded_count: run.succeeded_count || 0,
-        failed_count: run.failed_count || 0,
-        article_count: run.article_count || 0,
-      })),
+      recent_runs: runs.map((run) => serializePipelineRun(run, now)),
     });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to retrieve pipeline health' });
@@ -117,14 +124,14 @@ async function getHealthSummary(req, res) {
 
     const pipelineStatus = getPipelineStatus(latestRun, now);
     const schedulerLease = serializeLease(lease, now);
-    const hasSourceFailures = sourceCounts.failing > 0;
-    const hasSourceDegradation = sourceCounts.degraded > 0 || sourceCounts.unknown > 0;
-    const status = pipelineStatus === 'failing' || pipelineStatus === 'stalled' || hasSourceFailures
+    const hasSourceDegradation = sourceCounts.failing > 0 || sourceCounts.degraded > 0 || sourceCounts.unknown > 0;
+    const status = pipelineStatus === 'failing' || pipelineStatus === 'stalled'
       ? 'failing'
       : pipelineStatus === 'healthy' && !hasSourceDegradation
         ? 'healthy'
         : 'degraded';
 
+    const pipelineRun = latestRun ? serializePipelineRun(latestRun, now) : null;
     return res.json({
       status,
       checked_at: now,
@@ -136,10 +143,15 @@ async function getHealthSummary(req, res) {
       },
       pipeline: {
         status: pipelineStatus,
-        last_run_at: latestRun?.started_at || null,
-        last_completed_at: latestRun?.completed_at || null,
+        last_run_at: pipelineRun?.pipeline_started_at || null,
+        last_completed_at: pipelineRun?.pipeline_completed_at || null,
         last_run_status: latestRun?.status || null,
         last_stage: latestRun?.pipeline_stage || null,
+        last_error: latestRun?.pipeline_error || null,
+        heartbeat_at: latestRun?.pipeline_heartbeat_at || null,
+        stage_started_at: latestRun?.pipeline_stage_started_at || null,
+        stage_age_ms: pipelineRun?.stage_age_ms ?? null,
+        duration_ms: latestRun?.pipeline_duration_ms ?? null,
       },
       scheduler: schedulerLease,
     });
