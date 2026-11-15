@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const { createLogger } = require('../utils/logger');
 const { attachMongoClientMonitoring } = require('./mongoMonitoring');
+const { getMongoConnectionOptions } = require('./connectionOptions');
 
 const logger = createLogger();
 let connectionPromise = null;
@@ -21,6 +22,7 @@ mongoose.connection.on('connected', () => {
     logger.info(reconnectedAfterMs === null ? 'MongoDB connected' : 'MongoDB reconnected', {
       maxPoolSize: client.options.maxPoolSize,
       maxConnecting: client.options.maxConnecting,
+      autoIndex: mongoose.get('autoIndex'),
       reconnectedAfterMs,
     });
   } catch (error) {
@@ -39,20 +41,26 @@ async function connectDB(options = {}) {
   const uri = options.uri || process.env.MONGODB_URI;
   if (!uri) throw new Error('MONGODB_URI is required');
 
-  const connectAttempt = mongoose.connect(uri, {
+  const connectionOptions = {
+    ...getMongoConnectionOptions(),
+    ...options,
     dbName: options.dbName || process.env.MONGODB_DB_NAME || 'api',
-    serverSelectionTimeoutMS: options.serverSelectionTimeoutMS || 10000,
-    socketTimeoutMS: 45000,
-    maxPoolSize: options.maxPoolSize || 10,
-    monitorCommands: true,
-    retryWrites: true,
-    retryReads: true,
-  });
+  };
+  delete connectionOptions.uri;
+
+  const connectAttempt = mongoose.connect(uri, connectionOptions);
   try {
     attachMongoClientMonitoring(mongoose.connection.getClient(), logger);
   } catch (error) {
     logger.error('MongoDB monitoring setup failed', { error });
   }
+
+  logger.info('MongoDB connection configured', {
+    workerRole: process.env.SCHEDULER_WORKER === 'true' ? 'scheduler' : 'api',
+    maxPoolSize: connectionOptions.maxPoolSize,
+    autoIndex: connectionOptions.autoIndex,
+    waitQueueTimeoutMS: connectionOptions.waitQueueTimeoutMS,
+  });
 
   connectionPromise = connectAttempt.then(() => mongoose.connection).catch((error) => {
     logger.error('MongoDB connection failed', { error });
