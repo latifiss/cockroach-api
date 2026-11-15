@@ -16,7 +16,7 @@ const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
 const operationsRouter = require('./routes/operations.routes');
 const { intelligencePipelineJob } = require('./jobs/intelligencePipeline.job');
-const { startSourcePolling, stopSourcePolling } = require('./services/collection/sourcePollingService');
+const { startSourcePolling, stopSourcePolling, getSourcePollingStatus } = require('./services/collection/sourcePollingService');
 
 if (cluster.isPrimary) {
   logger.info('Primary process started', { pid: process.pid });
@@ -68,6 +68,7 @@ if (cluster.isPrimary) {
     res.status(ready ? 200 : 503).json({
       status: ready ? 'ready' : 'not_ready',
       dependencies: { mongodb: ready ? 'connected' : 'disconnected' },
+      source_polling: getSourcePollingStatus(),
     });
   });
   app.get('/health', (req, res) => {
