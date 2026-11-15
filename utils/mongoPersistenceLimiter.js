@@ -1,4 +1,16 @@
-const MAX_CONCURRENT_MONGO_PERSISTENCE = 6;
+function readConcurrencyLimit(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error('MONGO_PERSISTENCE_CONCURRENCY must be a positive integer');
+  }
+  return parsed;
+}
+
+const MAX_CONCURRENT_MONGO_PERSISTENCE = readConcurrencyLimit(
+  process.env.MONGO_PERSISTENCE_CONCURRENCY,
+  3
+);
 let active = 0;
 const waiters = [];
 
@@ -8,15 +20,13 @@ async function acquire() {
     return;
   }
   await new Promise((resolve) => waiters.push(resolve));
+  active += 1;
 }
 
 function release() {
-  const next = waiters.shift();
-  if (next) {
-    next();
-    return;
-  }
   active -= 1;
+  const next = waiters.shift();
+  if (next) next();
 }
 
 async function withMongoPersistence(operation) {
