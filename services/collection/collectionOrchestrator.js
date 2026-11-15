@@ -18,7 +18,7 @@ function withTimeout(promise, timeoutMs, sourceId) {
 
 function normalizeSourceError(error) {
   const message = typeof error === 'string' ? error : error?.message || 'Source collection failed';
-  const status = Number(error?.status || error?.response?.status || message.match(/\\b(?:HTTP\\s*)?(4\\d{2}|5\\d{2})\\b/i)?.[1]);
+  const status = Number(error?.status || error?.response?.status || message.match(/\b(?:HTTP\s*)?(4\d{2}|5\d{2})\b/i)?.[1]);
   return {
     name: error?.name || 'Error',
     code: error?.code || (status ? `HTTP_${status}` : 'SOURCE_FETCH_FAILED'),
@@ -80,6 +80,7 @@ async function executeSource(source, options) {
         },
         articles,
         error: null,
+        processingError: null,
       };
     } catch (error) {
       lastError = error;
@@ -101,6 +102,7 @@ async function executeSource(source, options) {
     source: null,
     articles: [],
     error: normalizeSourceError(lastError),
+    processingError: null,
   };
 }
 
@@ -116,7 +118,20 @@ async function runCollection(registry, options = {}) {
   }
 
   const startedAt = new Date();
-  const results = await mapWithConcurrency(registry, settings.concurrency, (source) => executeSource(source, settings));
+  const results = await mapWithConcurrency(registry, settings.concurrency, async (source) => {
+    const result = await executeSource(source, settings);
+    if (typeof options.onResult === 'function') {
+      try {
+        await options.onResult(result);
+      } catch (error) {
+        result.processingError = {
+          code: error.code || 'SOURCE_RESULT_PROCESSING_FAILED',
+          message: error.message || 'Source result processing failed',
+        };
+      }
+    }
+    return result;
+  });
   const completedAt = new Date();
 
   return {
