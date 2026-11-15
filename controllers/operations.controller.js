@@ -24,11 +24,11 @@ function authorizeOperations(req, res, next) {
 function getPipelineStatus(run, now = new Date()) {
   if (!run) return 'unknown';
   if (run.pipeline_status === 'running') {
-    const stageStartedAt = run.pipeline_stage_started_at
-      || run.pipeline_heartbeat_at
+    const lastActivityAt = run.pipeline_heartbeat_at
+      || run.pipeline_stage_started_at
       || run.pipeline_started_at
       || run.started_at;
-    const startedAt = stageStartedAt ? new Date(stageStartedAt).getTime() : 0;
+    const startedAt = lastActivityAt ? new Date(lastActivityAt).getTime() : 0;
     return startedAt && now.getTime() - startedAt > PIPELINE_STALE_AFTER_MS ? 'stalled' : 'running';
   }
   if (run.pipeline_status === 'failed' || run.status === 'failed' && !run.pipeline_status) return 'failing';
