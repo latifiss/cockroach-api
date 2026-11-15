@@ -8,7 +8,7 @@ const SourceHealth = require('../../models/sourceHealth.model');
 const Latest = require('../../models/latest.model');
 const News = require('../../models/news.model');
 const { clusterNewsArticles } = require('../../utils/newsCluster');
-const { persistNewsClusters } = require('../articles/newsPersistence');
+const { persistNewsClustersIncremental } = require('../articles/newsPersistence');
 const { updateNewsCache } = require('../../controllers/news/feed.controller');
 const { loadRuntimeConfig } = require('../../config/runtime');
 const { createLogger } = require('../../utils/logger');
@@ -110,7 +110,7 @@ async function processIntelligenceQueue() {
   });
 
   const clusters = await clusterNewsArticles(articles, 0.7);
-  const persistence = await persistNewsClusters(News, clusters, { logger });
+  const persistence = await persistNewsClustersIncremental(News, clusters, { logger });
   await updateNewsCache();
 
   logger.info('Incremental intelligence batch completed', {
@@ -147,7 +147,9 @@ async function collectOneSource(source) {
       const scored = scoreArticlesRelevance(normalized);
       const persistence = await persistLatestArticles(scored, { batchSize: 100 });
       newArticleCount = persistence.upserted;
-      if (scored.length) scheduleIntelligence(scored.map((article) => article.article_id));
+      if (persistence.upserted > 0 || persistence.modified > 0) {
+        scheduleIntelligence(scored.map((article) => article.article_id));
+      }
       logger.info('Publisher collection completed', {
         source: source.name,
         status: result.status,
@@ -205,6 +207,7 @@ async function stopSourcePolling() {
   stopped = true;
   if (intelligenceTimer) clearTimeout(intelligenceTimer);
   await intelligenceQueue;
+  while (activePolls > 0) await wait(100);
   logger.info('Continuous source polling stopped', { activePolls });
 }
 
