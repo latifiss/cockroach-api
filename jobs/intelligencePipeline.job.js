@@ -109,7 +109,21 @@ async function executePipeline() {
     startLeaseRenewal();
     logger.info('🚀 Intelligence pipeline started with renewable scheduler lease');
 
-    const collection = await collectCanonicalArticles();
+    const collection = await collectCanonicalArticles({
+      onSourceArticles: async ({ result, articles }) => {
+        assertLeaseOwnership();
+        if (!articles.length) return;
+        const scoredArticles = scoreArticlesRelevance(articles);
+        const persistence = await persistLatestArticles(scoredArticles, { batchSize: 100 });
+        logger.info('⚡ Source articles persisted immediately', {
+          source: result.sourceName,
+          articles: scoredArticles.length,
+          upserted: persistence.upserted,
+          modified: persistence.modified,
+        });
+        assertLeaseOwnership();
+      },
+    });
     collection.articles = scoreArticlesRelevance(collection.articles);
     assertLeaseOwnership();
 
@@ -279,7 +293,7 @@ async function executePipeline() {
   }
 }
 
-const intelligencePipelineJob = cron.schedule('*/30 * * * *', () => {
+const intelligencePipelineJob = cron.schedule('*/5 * * * *', () => {
   executePipeline().catch((error) => logger.error('Scheduled pipeline execution failed', { error }));
 }, { scheduled: false, timezone: 'UTC' });
 
