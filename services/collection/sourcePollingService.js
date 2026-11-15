@@ -12,12 +12,18 @@ const { persistNewsClustersIncremental } = require('../articles/newsPersistence'
 const { updateNewsCache } = require('../../controllers/news/feed.controller');
 const { loadRuntimeConfig } = require('../../config/runtime');
 const { createLogger } = require('../../utils/logger');
+const { randomUUID } = require('crypto');
+const SchedulerLease = require('../../models/schedulerLease.model');
 
 const logger = createLogger();
 const POLL_INTERVAL_MS = Math.max(30000, Number.parseInt(process.env.SOURCE_POLL_INTERVAL_MS, 10) || 5 * 60 * 1000);
 const INTELLIGENCE_DEBOUNCE_MS = Math.max(1000, Number.parseInt(process.env.INTELLIGENCE_DEBOUNCE_MS, 10) || 10000);
 const INTELLIGENCE_LOOKBACK_HOURS = Math.max(1, Number.parseInt(process.env.INTELLIGENCE_LOOKBACK_HOURS, 10) || 6);
 const INTELLIGENCE_ARTICLE_LIMIT = Math.max(100, Number.parseInt(process.env.INTELLIGENCE_ARTICLE_LIMIT, 10) || 1000);
+const SOURCE_POLLING_LEASE_ID = 'news-source-polling';
+const SOURCE_POLLING_LEASE_DURATION_MS = 5 * 60 * 1000;
+const SOURCE_POLLING_LEASE_RENEWAL_MS = 60 * 1000;
+const sourcePollingOwner = `${process.pid}:${randomUUID()}`;
 let started = false;
 let stopped = false;
 let intelligenceTimer = null;
@@ -25,6 +31,7 @@ let intelligenceQueue = Promise.resolve();
 let pendingArticleIds = new Set();
 let retryArticleIds = [];
 let activePolls = 0;
+let sourcePollingLeaseTimer = null;
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -206,27 +213,93 @@ async function collectOneSource(source) {
   }
 }
 
-function startSourcePolling() {
-  if (started) return;
+async function acquireSourcePollingLease() {
+  const now = new Date();
+  const leaseUntil = new Date(now.getTime() + SOURCE_POLLING_LEASE_DURATION_MS);
+  const lease = await SchedulerLease.findOneAndUpdate(
+    { _id: SOURCE_POLLING_LEASE_ID, lease_until: { $lte: now } },
+    { $set: { owner: sourcePollingOwner, acquired_at: now, lease_until: leaseUntil } },
+    { new: true }
+  ).lean();
+
+  if (lease?.owner === sourcePollingOwner) return true;
+
+  try {
+    await SchedulerLease.create({
+      _id: SOURCE_POLLING_LEASE_ID,
+      owner: sourcePollingOwner,
+      acquired_at: now,
+      lease_until: leaseUntil,
+    });
+    return true;
+  } catch (error) {
+    if (error.code === 11000) {
+      logger.warn('Source polling is already owned by another application instance');
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function renewSourcePollingLease() {
+  const now = new Date();
+  const result = await SchedulerLease.updateOne(
+    {
+      _id: SOURCE_POLLING_LEASE_ID,
+      owner: sourcePollingOwner,
+      lease_until: { $gt: now },
+    },
+    { $set: { lease_until: new Date(now.getTime() + SOURCE_POLLING_LEASE_DURATION_MS) } }
+  );
+  return result.matchedCount === 1;
+}
+
+async function startSourcePolling() {
+  if (started) return true;
+  const acquired = await acquireSourcePollingLease();
+  if (!acquired) return false;
+
   started = true;
   stopped = false;
+  sourcePollingLeaseTimer = setInterval(() => {
+    renewSourcePollingLease()
+      .then((renewed) => {
+        if (renewed) return;
+        stopped = true;
+        logger.error('Source polling lease was lost; this instance will stop scheduling publisher polls');
+      })
+      .catch((error) => {
+        stopped = true;
+        logger.error('Source polling lease renewal failed; this instance will stop scheduling publisher polls', { error });
+      });
+  }, SOURCE_POLLING_LEASE_RENEWAL_MS);
+  sourcePollingLeaseTimer.unref();
+
   logger.info('Continuous source polling started', {
     sources: sourceRegistry.length,
     pollIntervalMs: POLL_INTERVAL_MS,
     concurrency: 'all registered sources',
+    leaseOwner: sourcePollingOwner,
   });
   for (const source of sourceRegistry) {
     collectOneSource(source).catch((error) => {
       logger.error('Initial publisher collection failed', { source: source.name, error });
     });
   }
+  return true;
 }
 
 async function stopSourcePolling() {
   stopped = true;
+  if (sourcePollingLeaseTimer) clearInterval(sourcePollingLeaseTimer);
+  sourcePollingLeaseTimer = null;
   if (intelligenceTimer) clearTimeout(intelligenceTimer);
   await intelligenceQueue;
   while (activePolls > 0) await wait(100);
+  await SchedulerLease.updateOne(
+    { _id: SOURCE_POLLING_LEASE_ID, owner: sourcePollingOwner },
+    { $set: { lease_until: new Date() } }
+  ).catch((error) => logger.error('Failed to release source polling lease', { error }));
   logger.info('Continuous source polling stopped', { activePolls });
 }
 
