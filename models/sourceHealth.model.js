@@ -22,6 +22,9 @@ const sourceHealthSchema = new mongoose.Schema({
   last_error_message: { type: String, default: null },
   last_duration_ms: { type: Number, default: null },
   last_article_count: { type: Number, default: 0 },
+  last_new_article_count: { type: Number, default: 0, min: 0 },
+  poll_interval_ms: { type: Number, default: null, min: 0 },
+  next_fetch_at: { type: Date, default: null, index: true },
 }, { timestamps: true, versionKey: false });
 
 sourceHealthSchema.index({ status: 1, last_attempt_at: -1 });
