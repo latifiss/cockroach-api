@@ -357,9 +357,13 @@ async function getDistributedSourcePollingStatus() {
     .select('owner lease_until acquired_at')
     .lean();
   const leaseActive = Boolean(lease && new Date(lease.lease_until).getTime() > Date.now());
+  const isLocalOwner = leaseActive && lease.owner === sourcePollingOwner;
   return {
     ...getSourcePollingStatus(),
     started: leaseActive,
+    activePolls: isLocalOwner ? activePolls : null,
+    inFlightSources: isLocalOwner ? [...inFlightSources] : null,
+    pendingIntelligenceArticles: isLocalOwner ? pendingArticleIds.size : null,
     leaseActive,
     leaseUntil: lease?.lease_until || null,
     owner: leaseActive ? lease.owner : null,
