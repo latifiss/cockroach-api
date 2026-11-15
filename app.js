@@ -16,7 +16,7 @@ const articleRouter = require('./routes/news/articles.routes');
 const newsRouter = require('./routes/news/news.routes');
 const operationsRouter = require('./routes/operations.routes');
 const { intelligencePipelineJob } = require('./jobs/intelligencePipeline.job');
-const { startSourcePolling, stopSourcePolling, getSourcePollingStatus } = require('./services/collection/sourcePollingService');
+const { startSourcePolling, stopSourcePolling, getDistributedSourcePollingStatus } = require('./services/collection/sourcePollingService');
 
 if (cluster.isPrimary) {
   logger.info('Primary process started', { pid: process.pid });
@@ -63,12 +63,21 @@ if (cluster.isPrimary) {
   app.use('/api/operations', operationsRouter);
 
   app.get('/health/live', (req, res) => res.status(200).json({ status: 'alive', pid: process.pid }));
-  app.get('/health/ready', (req, res) => {
+  app.get('/health/ready', async (req, res) => {
     const ready = isDBConnected();
+    let sourcePolling = null;
+    if (ready) {
+      try {
+        sourcePolling = await getDistributedSourcePollingStatus();
+      } catch (error) {
+        logger.error('Failed to read distributed source polling status', { error });
+        sourcePolling = { leaseActive: false, error: error.message };
+      }
+    }
     res.status(ready ? 200 : 503).json({
       status: ready ? 'ready' : 'not_ready',
       dependencies: { mongodb: ready ? 'connected' : 'disconnected' },
-      source_polling: getSourcePollingStatus(),
+      source_polling: sourcePolling,
     });
   });
   app.get('/health', (req, res) => {
