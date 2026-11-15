@@ -351,4 +351,19 @@ function getSourcePollingStatus() {
   };
 }
 
-module.exports = { startSourcePolling, stopSourcePolling, getSourcePollingStatus, processIntelligenceQueue };
+
+async function getDistributedSourcePollingStatus() {
+  const lease = await SchedulerLease.findById(SOURCE_POLLING_LEASE_ID)
+    .select('owner lease_until acquired_at')
+    .lean();
+  const leaseActive = Boolean(lease && new Date(lease.lease_until).getTime() > Date.now());
+  return {
+    ...getSourcePollingStatus(),
+    started: leaseActive,
+    leaseActive,
+    leaseUntil: lease?.lease_until || null,
+    owner: leaseActive ? lease.owner : null,
+  };
+}
+
+module.exports = { startSourcePolling, stopSourcePolling, getSourcePollingStatus, getDistributedSourcePollingStatus, processIntelligenceQueue };
