@@ -213,6 +213,22 @@ async function collectOneSource(source) {
   }
 }
 
+
+async function queueRecentArticlesForIntelligence() {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recent = await Latest.find({
+    $or: [
+      { first_seen_at: { $gte: cutoff } },
+      { published_at: { $gte: cutoff } },
+    ],
+  })
+    .sort({ first_seen_at: -1, published_at: -1 })
+    .limit(INTELLIGENCE_ARTICLE_LIMIT)
+    .select('article_id')
+    .lean();
+  scheduleIntelligence(recent.map((article) => article.article_id).filter(Boolean));
+}
+
 async function acquireSourcePollingLease() {
   const now = new Date();
   const leaseUntil = new Date(now.getTime() + SOURCE_POLLING_LEASE_DURATION_MS);
@@ -303,6 +319,7 @@ async function startSourcePolling() {
     timer.unref();
     sourcePollingTimers.set(source.id, timer);
   }
+  queueRecentArticlesForIntelligence().catch((error) => logger.error('Failed to queue recently ingested articles after startup', { error }));
   return true;
 }
 
