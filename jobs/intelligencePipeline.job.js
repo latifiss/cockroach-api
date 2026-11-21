@@ -115,7 +115,7 @@ async function executePipeline() {
         if (!articles.length) return;
         const scoredArticles = scoreArticlesRelevance(articles);
         const persistence = await persistLatestArticles(scoredArticles, { batchSize: 100 });
-        logger.info('⚡ Source articles persisted immediately', {
+        logger.debug('Source articles persisted immediately', {
           source: result.sourceName,
           articles: scoredArticles.length,
           upserted: persistence.upserted,
@@ -171,17 +171,17 @@ async function executePipeline() {
     currentStageStartedAt = Date.now();
     assertLeaseOwnership();
     await updatePipelineStage(collectionRun._id, currentStage);
-    logger.info('💾 Latest article persistence started', { articles: collection.articles.length });
+    logger.debug('Latest article persistence started', { articles: collection.articles.length });
     const latest = await persistLatestArticles(collection.articles);
     assertLeaseOwnership();
-    logger.info('✅ Latest article persistence finished', {
+    logger.debug('Latest article persistence finished', {
       upserted: latest.upserted, modified: latest.modified, batches: latest.batches,
     });
 
     currentStage = 'clustering';
     currentStageStartedAt = Date.now();
     await updatePipelineStage(collectionRun._id, currentStage);
-    logger.info('🧠 Article clustering started', { articles: collection.articles.length });
+    logger.debug('Article clustering started', { articles: collection.articles.length });
     const articlesById = new Map();
     for (const article of collection.articles) {
       if (!article?.article_id || !article?.title) continue;
@@ -200,7 +200,7 @@ async function executePipeline() {
     }));
     const clusters = articles.length ? await clusterNewsArticles(articles, 0.7) : [];
     assertLeaseOwnership();
-    logger.info('✅ Article clustering finished', { articles: articles.length, clusters: clusters.length });
+    logger.debug('Article clustering finished', { articles: articles.length, clusters: clusters.length });
 
     currentStage = 'news_persistence';
     currentStageStartedAt = Date.now();
@@ -212,7 +212,7 @@ async function executePipeline() {
       { logger, leaseOwner: getPipelineLeaseOwner() }
     );
     assertLeaseOwnership();
-    logger.info('💾 News cluster persistence finished', {
+    logger.debug('News cluster persistence finished', {
       clusters: clusterPersistence.attempted,
       inserted: clusterPersistence.inserted,
       updated: clusterPersistence.updated,
