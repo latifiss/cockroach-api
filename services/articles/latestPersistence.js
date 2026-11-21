@@ -77,14 +77,14 @@ async function persistLatestArticles(articles, options = {}) {
       ...Object.keys(toLatestDocument(validArticles[0])),
     ])];
     const comparisonStartedAt = Date.now();
-    logger.info('🔎 Latest article comparison started', { requestedItems: articleIds.length });
+    logger.debug('Latest article comparison started', { requestedItems: articleIds.length });
     let existingArticles;
     try {
       existingArticles = await Latest.find({ article_id: { $in: articleIds } })
         .select(projectionFields.join(' '))
         .lean();
     } catch (error) {
-      logger.error('❌ Latest article comparison failed', {
+      logger.error('Latest article comparison failed', {
         durationMs: Date.now() - comparisonStartedAt,
         requestedItems: articleIds.length,
         returnedItems: 0,
@@ -92,7 +92,7 @@ async function persistLatestArticles(articles, options = {}) {
       });
       throw error;
     }
-    logger.info('✅ Latest article comparison completed', {
+    logger.debug('Latest article comparison completed', {
       durationMs: Date.now() - comparisonStartedAt,
       requestedItems: articleIds.length,
       returnedItems: existingArticles.length,
@@ -139,7 +139,7 @@ async function persistLatestArticles(articles, options = {}) {
 
     if (!operations.length) {
       const result = { ...emptyPersistenceResult(), checked: validArticles.length, unchanged };
-      logger.info('Latest article persistence completed', {
+      logger.debug('Latest article persistence completed', {
         attempted: 0,
         batches: 0,
         upserted: 0,
@@ -150,7 +150,7 @@ async function persistLatestArticles(articles, options = {}) {
       return result;
     }
 
-    logger.info('Saving latest articles', { count: operations.length, batchSize: options.batchSize || 500 });
+    logger.debug('Saving latest articles', { count: operations.length, batchSize: options.batchSize || 500 });
     const result = await bulkWriteInBatches(Latest, operations, {
       batchSize: options.batchSize ?? 500,
       maxRetries: options.maxRetries ?? 2,
