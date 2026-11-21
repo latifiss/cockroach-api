@@ -23,6 +23,7 @@ const { createIntelligenceArticleQueue } = require('./intelligenceArticleQueue')
 
 const logger = createLogger();
 const POLL_INTERVAL_MS = Math.max(30000, Number.parseInt(process.env.SOURCE_POLL_INTERVAL_MS, 10) || 5 * 60 * 1000);
+const SOURCE_POLL_CONCURRENCY = Math.max(1, Number.parseInt(process.env.SOURCE_POLL_CONCURRENCY, 10) || 6);
 const INTELLIGENCE_DEBOUNCE_MS = Math.max(1000, Number.parseInt(process.env.INTELLIGENCE_DEBOUNCE_MS, 10) || 10000);
 const INTELLIGENCE_LOOKBACK_HOURS = Math.max(1, Number.parseInt(process.env.INTELLIGENCE_LOOKBACK_HOURS, 10) || 6);
 const INTELLIGENCE_ARTICLE_LIMIT = Math.max(100, Number.parseInt(process.env.INTELLIGENCE_ARTICLE_LIMIT, 10) || 1000);
@@ -48,6 +49,8 @@ let lastBatchFailedAt = null;
 let lastBatchError = null;
 const sourcePollingTimers = new Map();
 const inFlightSources = new Set();
+const sourcePollQueue = [];
+const queuedSources = new Set();
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -242,6 +245,25 @@ async function processIntelligenceQueue() {
   if (pendingArticleIds.size) scheduleIntelligence([]);
 }
 
+function enqueueSourcePoll(source) {
+  if (stopped || inFlightSources.has(source.id) || queuedSources.has(source.id)) return false;
+  queuedSources.add(source.id);
+  sourcePollQueue.push(source);
+  drainSourcePollQueue();
+  return true;
+}
+
+function drainSourcePollQueue() {
+  while (!stopped && activePolls < SOURCE_POLL_CONCURRENCY && sourcePollQueue.length > 0) {
+    const source = sourcePollQueue.shift();
+    queuedSources.delete(source.id);
+    if (inFlightSources.has(source.id)) continue;
+    collectOneSource(source).catch((error) => {
+      logger.error('Publisher collection escaped its error handler', { source: source.name, error });
+    });
+  }
+}
+
 async function collectOneSource(source) {
   if (stopped || inFlightSources.has(source.id)) return;
   inFlightSources.add(source.id);
@@ -308,6 +330,7 @@ async function collectOneSource(source) {
     activePolls -= 1;
     inFlightSources.delete(source.id);
     scheduleMetricsPublish();
+    drainSourcePollQueue();
   }
 }
 
@@ -403,22 +426,18 @@ async function startSourcePolling() {
   logger.info('Continuous source polling started', {
     sources: sourceRegistry.length,
     pollIntervalMs: POLL_INTERVAL_MS,
-    concurrency: 'all registered sources',
+    concurrency: SOURCE_POLL_CONCURRENCY,
     leaseOwner: sourcePollingOwner,
   });
   scheduleMetricsPublish();
   for (const source of sourceRegistry) {
-    collectOneSource(source).catch((error) => {
-      logger.error('Initial publisher collection failed', { source: source.name, error });
-    });
+    enqueueSourcePoll(source);
     const timer = setInterval(() => {
-      if (inFlightSources.has(source.id)) {
-        logger.warn('Publisher poll skipped because its previous request is still running', { source: source.name });
+      if (inFlightSources.has(source.id) || queuedSources.has(source.id)) {
+        logger.debug('Publisher poll skipped because its previous request is still running or queued', { source: source.name });
         return;
       }
-      collectOneSource(source).catch((error) => {
-        logger.error('Scheduled publisher collection failed', { source: source.name, error });
-      });
+      enqueueSourcePoll(source);
     }, POLL_INTERVAL_MS);
     timer.unref();
     sourcePollingTimers.set(source.id, timer);
@@ -433,6 +452,8 @@ async function stopSourcePolling() {
   sourcePollingLeaseTimer = null;
   for (const timer of sourcePollingTimers.values()) clearInterval(timer);
   sourcePollingTimers.clear();
+  sourcePollQueue.length = 0;
+  queuedSources.clear();
   if (intelligenceTimer) clearTimeout(intelligenceTimer);
   if (recoveryRetryTimer) clearTimeout(recoveryRetryTimer);
   recoveryRetryTimer = null;
@@ -455,6 +476,8 @@ function getSourcePollingStatus() {
     pendingIntelligenceArticles: pendingArticleIds.size,
     mongoPersistence: getMongoPersistenceStatus(),
     pollIntervalMs: POLL_INTERVAL_MS,
+    sourcePollConcurrency: SOURCE_POLL_CONCURRENCY,
+    queuedSources: sourcePollQueue.length,
   };
 }
 
