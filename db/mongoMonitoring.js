@@ -11,7 +11,7 @@ function attachMongoClientMonitoring(client, logger) {
   const lastHeartbeatFailure = new Map();
 
   client.on('connectionPoolCreated', (event) => {
-    logger.info('MongoDB connection pool created', {
+    logger.debug('MongoDB connection pool created', {
       server: event.address,
       maxPoolSize: event.options.maxPoolSize,
       maxConnecting: event.options.maxConnecting,
@@ -19,7 +19,7 @@ function attachMongoClientMonitoring(client, logger) {
     });
   });
   client.on('connectionPoolReady', (event) => {
-    logger.info('MongoDB connection pool ready', { server: event.address });
+    logger.debug('MongoDB connection pool ready', { server: event.address });
   });
   client.on('connectionPoolCleared', (event) => {
     logger.warn('MongoDB connection pool cleared', {
@@ -28,7 +28,7 @@ function attachMongoClientMonitoring(client, logger) {
     });
   });
   client.on('connectionPoolClosed', (event) => {
-    logger.info('MongoDB connection pool closed', { server: event.address });
+    logger.debug('MongoDB connection pool closed', { server: event.address });
   });
   client.on('connectionClosed', (event) => {
     if (event.reason !== 'error') return;
@@ -40,14 +40,14 @@ function attachMongoClientMonitoring(client, logger) {
   });
   client.on('connectionReady', (event) => {
     if (event.durationMS < SLOW_CHECKOUT_MS) return;
-    logger.warn('MongoDB connection establishment delayed', {
+    logger.debug('MongoDB connection establishment delayed', {
       server: event.address,
       durationMs: event.durationMS,
     });
   });
   client.on('connectionCheckedOut', (event) => {
     if (event.durationMS < SLOW_CHECKOUT_MS) return;
-    logger.warn('MongoDB connection checkout delayed', {
+    logger.debug('MongoDB connection checkout delayed', {
       server: event.address,
       durationMs: event.durationMS,
     });
@@ -61,7 +61,7 @@ function attachMongoClientMonitoring(client, logger) {
   });
   client.on('commandSucceeded', (event) => {
     if (event.duration < SLOW_COMMAND_MS) return;
-    logger.warn('MongoDB command slow', {
+    logger.debug('MongoDB command slow', {
       database: event.databaseName,
       command: event.commandName,
       durationMs: event.duration,
