@@ -41,7 +41,8 @@ function serializeError(error) {
 }
 
 function createLogger(options = {}) {
-  const threshold = LEVELS[options.level || process.env.LOG_LEVEL || 'info'] ?? LEVELS.info;
+  const requestedLevel = String(options.level || process.env.LOG_LEVEL || 'info').toLowerCase();
+  const threshold = LEVELS[requestedLevel] ?? LEVELS.info;
   const sink = options.sink || console;
   const pretty = options.pretty !== false;
 
