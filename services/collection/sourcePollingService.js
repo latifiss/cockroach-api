@@ -122,7 +122,7 @@ function scheduleIntelligence(articleIds) {
   const added = pendingArticleIds.add(articleIds);
   if (added) {
     lastQueueTriggeredAt = new Date();
-    logger.info('🧠 Intelligence articles queued', {
+    logger.debug('Intelligence articles queued', {
       added,
       pending: pendingArticleIds.size,
     });
@@ -187,7 +187,7 @@ async function processIntelligenceQueue() {
   }
 
   const articles = [...articlesById.values()];
-  logger.info('📥 Intelligence articles loaded', {
+  logger.debug('Intelligence articles loaded', {
     queuedArticles: queuedIds.length,
     queuedFound: queuedArticles.length,
     recentFound: recentArticles.length,
@@ -205,15 +205,15 @@ async function processIntelligenceQueue() {
   }
 
   intelligenceStage = 'clustering';
-  logger.info('🧩 News clustering started', { articles: articles.length });
+  logger.debug('News clustering started', { articles: articles.length });
   scheduleMetricsPublish();
   const clusters = await clusterNewsArticles(articles, 0.7);
-  logger.info('🧩 News clustering completed', { articles: articles.length, clusters: clusters.length });
+  logger.debug('News clustering completed', { articles: articles.length, clusters: clusters.length });
   intelligenceStage = 'persisting_clusters';
-  logger.info('💾 Incremental news cluster persistence started', { clusters: clusters.length });
+  logger.debug('Incremental news cluster persistence started', { clusters: clusters.length });
   scheduleMetricsPublish();
   const persistence = await persistNewsClustersIncremental(News, clusters, { logger });
-  logger.info('💾 Incremental news cluster persistence completed', {
+  logger.debug('Incremental news cluster persistence completed', {
     attempted: persistence.attempted,
     inserted: persistence.inserted,
     updated: persistence.updated,
