@@ -48,5 +48,6 @@ const NewsSchema = new mongoose.Schema(
 );
 
 NewsSchema.index({ average_relevance: -1, updatedAt: -1 });
+NewsSchema.index({ 'articles.source_tags': 1, updatedAt: -1 }, { background: false });
 
 module.exports = mongoose.models.News || mongoose.model('News', NewsSchema);

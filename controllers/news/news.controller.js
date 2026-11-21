@@ -174,12 +174,6 @@ const getNewsByCategory = async (req, res) => {
     const limit = 100;
     const skip = (page - 1) * limit;
 
-    // Create index if it doesn't exist (should be done separately in production)
-    await News.collection.createIndex({
-      'articles.source_tags': 1,
-      updatedAt: -1,
-    });
-
     // Optimized aggregation pipeline
     const result = await News.aggregate([
       {

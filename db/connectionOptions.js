@@ -28,4 +28,17 @@ function getMongoConnectionOptions(env = process.env) {
   };
 }
 
-module.exports = { getMongoConnectionOptions, readPositiveInteger };
+function getEffectiveMongoConnectionOptions(options = {}, env = process.env) {
+  return {
+    ...getMongoConnectionOptions(env),
+    ...options,
+    dbName: options.dbName || env.MONGODB_DB_NAME || 'api',
+    autoIndex: false,
+  };
+}
+
+module.exports = {
+  getMongoConnectionOptions,
+  getEffectiveMongoConnectionOptions,
+  readPositiveInteger,
+};
